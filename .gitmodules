@@ -1,0 +1,3 @@
+[submodule "DynamicDet"]
+	path = DynamicDet
+	url = git@github.com:WEHI-ResearchComputing/DynamicDet.git
