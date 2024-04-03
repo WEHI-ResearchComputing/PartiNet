@@ -1,0 +1,11 @@
+10389, Contains two datasets (A and B) also in tiff format so needed directory rename
+10444,in tiff format so needed directory rename
+10526, in tiff format so needed directory rename
+10576, in tiff format so needed directory rename
+10671, in tiff format so needed directory rename
+10737, in tiff format so needed directory rename
+10816, in tiff format so needed directory rename
+10852, in tiff format so needed directory rename
+11051, in tiff format so needed directory rename
+11056, in tiff format so needed directory rename
+11057, in tiff format so needed directory rename
