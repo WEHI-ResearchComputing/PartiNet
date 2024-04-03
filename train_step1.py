@@ -1,4 +1,5 @@
 import argparse
+import sys
 import logging
 import math
 import os
@@ -553,6 +554,33 @@ if __name__ == '__main__':
     opt.world_size = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     opt.global_rank = int(os.environ['RANK']) if 'RANK' in os.environ else -1
     set_logging(opt.global_rank)
+    
+    # DDP mode
+    world_size=0
+    world_rank=0
+    if 'LOCAL_RANK' in os.environ:
+        # Environment variables set by torch.distributed.launch or torchrun
+        opt.local_rank = int(os.environ['LOCAL_RANK'])
+        world_size = int(os.environ['WORLD_SIZE'])
+        world_rank = int(os.environ['RANK'])
+    elif 'OMPI_COMM_WORLD_LOCAL_RANK' in os.environ:
+        # Environment variables set by mpirun
+        opt.local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK'])
+        world_size = int(os.environ['OMPI_COMM_WORLD_SIZE'])
+        world_rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
+    if world_rank > 0:
+        sys.stdout = open(os.devnull, "w")
+    
+
+    opt.total_batch_size = opt.batch_size
+    device = select_device(opt.device, batch_size=opt.batch_size)
+    if opt.local_rank != -1:
+        assert torch.cuda.device_count() > opt.local_rank
+        torch.cuda.set_device(opt.local_rank)
+        device = torch.device('cuda', opt.local_rank)
+        dist.init_process_group(backend='nccl', init_method='env://',rank=world_rank, world_size=world_size)#, timeout=datetime.timedelta(seconds=200))  # distributed backend
+        assert opt.batch_size % opt.world_size == 0, '--batch-size must be multiple of CUDA device count'
+        opt.batch_size = opt.total_batch_size // opt.world_size
 
     # Resume
     wandb_run = check_wandb_resume(opt)
@@ -572,17 +600,6 @@ if __name__ == '__main__':
         assert len(opt.cfg), 'cfg must be specified'
         opt.img_size.extend([opt.img_size[-1]] * (2 - len(opt.img_size)))  # extend to 2 sizes (train, test)
         opt.save_dir = increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok)  # increment run
-
-    # DDP mode
-    opt.total_batch_size = opt.batch_size
-    device = select_device(opt.device, batch_size=opt.batch_size)
-    if opt.local_rank != -1:
-        assert torch.cuda.device_count() > opt.local_rank
-        torch.cuda.set_device(opt.local_rank)
-        device = torch.device('cuda', opt.local_rank)
-        dist.init_process_group(backend='nccl', init_method='env://')  # distributed backend
-        assert opt.batch_size % opt.world_size == 0, '--batch-size must be multiple of CUDA device count'
-        opt.batch_size = opt.total_batch_size // opt.world_size
 
     # Hyperparameters
     with open(opt.hyp) as f:
