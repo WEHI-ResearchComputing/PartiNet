@@ -5,9 +5,9 @@ import numpy as np
 from sklearn.model_selection import train_test_split as tts
 
 # put your paths here
-labels_path = "/path/to/yolo_format/labels"
-images_path = "/path/to/denoised/images"
-output_dir = "/training/directory"
+labels_path = "/vast/scratch/users/iskander.j/PartiNet_Training/all_labels"
+images_path = "/vast/scratch/users/iskander.j/PartiNet_Training/all_images"
+output_dir = "/vast/scratch/users/iskander.j/PartiNet_Training"
 
 if not os.path.exists(output_dir):
     os.mkdir(output_dir)
