@@ -18,10 +18,12 @@ output_dir=${dataset_path}/denoised_micrographs/jpg
 mkdir -p $output_dir
 
 echo "Denoising...."
-topaz denoise ${dataset_path}/micrographs/*.mrc -o $output_dir --format "jpg"
+#topaz denoise ${dataset_path}/micrographs/*.mrc -o $output_dir --format "jpg"
 echo "Denoising finished."
 echo "Generating bounding box...."
-./preprocess.py --dataset ${dataset_name} --datasets_path /vast/scratch/users/iskander.j/PartiNet_data/testing/ --tag _test
+./preprocess.py --dataset ${dataset_name} \
+                --datasets_path /vast/scratch/users/iskander.j/PartiNet_data/testing/ \
+                --tag _test
 echo "Done."
 
 

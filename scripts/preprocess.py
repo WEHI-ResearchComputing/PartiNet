@@ -37,10 +37,7 @@ def calculate_bounding_box(images_dir:str, coords_dir:str, annot_dir:str):
     if os.path.exists(annot_dir):
         if len(os.listdir(annot_dir)) == len(os.listdir(images_dir)):
             print(f"{len(os.listdir(annot_dir))} annotated images already exist.")
-            f = open("annot_images.txt", "a")
-            f.write(f"{FLAGS.dataset},{len(os.listdir(annot_dir))}\n")
-            f.close()
-            return
+            return len(os.listdir(annot_dir))
     else:
         os.makedirs(annot_dir)
     ##Annotating, Bounding Box calculation
@@ -77,8 +74,7 @@ def calculate_bounding_box(images_dir:str, coords_dir:str, annot_dir:str):
                 f.write(f"{FLAGS.dataset},{image_name}\n")
 
     print(f"{num_annotated_imgs} annotated images.")
-    with open("meta/annot_images.txt", "a") as f:
-        f.write(f"{FLAGS.dataset},{num_annotated_imgs}\n")
+    return num_annotated_imgs
 
 def write_file_paths_to_file(filename:str, dirname:str, mode:str):
     with open(filename, mode) as f:
@@ -89,6 +85,9 @@ def write_file_paths_to_file(filename:str, dirname:str, mode:str):
 def prep_datasplit(images_dir:str, annot_dir:str, set:int,notused:bool):
     datasplit_path=os.path.join(FLAGS.datasets_path,"data_split")
     coords = os.listdir(annot_dir)
+    train=0
+    val=0
+    test=0
 
     if set==2: # test set
         if notused:
@@ -109,9 +108,12 @@ def prep_datasplit(images_dir:str, annot_dir:str, set:int,notused:bool):
         else:
             write_file_paths_to_file(os.path.join(datasplit_path, "test_all.txt"),o_image_path,"a")
             write_file_paths_to_file(os.path.join(datasplit_path, "test.txt"),o_image_path,"a")
+        test=len(coords)
     elif set == 1: #development set
         # splitting data into training and val
         train_idx, val_idx = tts(np.arange(0, len(coords), 1), shuffle=True)
+        train=len(train_idx)
+        val=len(val_idx)
         suffix=""
         if notused:
             suffix="_left"
@@ -155,6 +157,7 @@ def prep_datasplit(images_dir:str, annot_dir:str, set:int,notused:bool):
         with open(os.path.join(datasplit_path, "cryo_training.yaml"), "w") as f:
             json.dump(training,f)
 
+    return train,val,test 
 
 def main(argv):
     datasplit_path=os.path.join(FLAGS.datasets_path,"data_split")
@@ -195,9 +198,11 @@ def main(argv):
         return
     
     annot_dir = os.path.join(FLAGS.datasets_path,FLAGS.dataset,"annotations")
-    calculate_bounding_box(images_dir, coords_dir, annot_dir)
-    logging.debug(f"set {set} and notused:{notused}")
-    prep_datasplit(images_dir, annot_dir, set,notused)
+    annotated=calculate_bounding_box(images_dir, coords_dir, annot_dir)
+    logging.debug(f"set {set}, notused:{notused}, annotated:{annotated}")
+    train,val,test=prep_datasplit(images_dir, annot_dir, set,notused)
+    with open("meta/development_set_split.txt", "a") as f:
+            f.write(f"{FLAGS.dataset},{annotated},{train},{val},{test},\n")
 
 if __name__ == '__main__':
     
