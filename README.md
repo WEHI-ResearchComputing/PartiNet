@@ -19,6 +19,35 @@ A particle picking tool that uses DynamicDet and trained on CryoPPP
     * `detect` --> ??
     * `train_step1` and `train_step2`  --> ??
 
+## Usage
+### Preprocessing
+This step runs on one dataset to creating bounding boxes and split images into development and test sets.
+
+The Python script uses the conda env installed `/stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/envs/py3_11/bin/python3`
+
+Example run found in `preprocess.py`
+
+```
+
+./preprocess.py --dataset <dataset_name> --datasets_path /vast/scratch/users/iskander.j/PartiNet_data/testing/ --tag _test
+
+```
+
+#### Arguments:
+
+* dataset: dataset name, e.g. 10005, and it must be a directory found in datasets_path
+* datasets_path: path to all datasets
+* tag: to add a suffix to text files used by script.
+
+#### How it works:
+First step is go to dataset path and create directory called `annotations` where bounding box data will be saved as `*.txt` files.
+
+Then, using the two text files `development_set<tag>.txt` & `test_set<tag>.txt`, the dataset images and label (annotations) will be split into test and development (train and val) sets and saved to `data_split` directory.
+
+The script writes 
+* noannot_images.txt: for each dataset, list of micrographs without annotation.
+* development_set_split.txt: csv that saves dataset, number of annotated micrographs, number of images in training set, number of images in validation set,number of images in test set.
+
 
 
 
