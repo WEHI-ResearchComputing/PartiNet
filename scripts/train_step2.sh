@@ -5,10 +5,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=aggarwal.m@wehi.edu.au
 
-
-module load miniconda3/latest
-conda activate /vast/projects/miti2324/envs/dynamicdet_mamba37
-python /vast/projects/miti2324/cryo_em_dynamic_det/DynamicDet/train_step2.py \
+python DynamicDet/train_step2.py \
     --workers 4 --device 0 --batch-size 1 --epochs 10 --img 640 --adam \
     --cfg DynamicDet/cfg/dy-yolov7-step2.yaml \
     --weight ./runs/train/train_step1/weights/epoch_049.pt \
