@@ -20,6 +20,6 @@ def train2():
 
 @main.command()
 def detect():
-    from .DynamicDet.detect import detect as dd_detect
+    import partinet.DynamicDet.detect
     click.echo("This will perform DynamicDet detection.")
-    dd_detect()
+    partinet.DynamicDet.detect.detect()
