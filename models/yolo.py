@@ -10,10 +10,10 @@ sys.path.append('./')  # to run '$ python *.py' files in subdirectories
 logger = logging.getLogger(__name__)
 import torch
 from torch.nn.modules.batchnorm import _BatchNorm
-from ..models.common import *
-from ..utils.autoanchor import check_anchor_order
-from ..utils.general import make_divisible, check_file, set_logging
-from ..utils.torch_utils import time_synchronized, fuse_conv_and_bn, model_info, scale_img, initialize_weights, \
+from partinet.DynamicDet.models.common import *
+from partinet.DynamicDet.utils.autoanchor import check_anchor_order
+from partinet.DynamicDet.utils.general import make_divisible, check_file, set_logging
+from partinet.DynamicDet.utils.torch_utils import time_synchronized, fuse_conv_and_bn, model_info, scale_img, initialize_weights, \
     select_device, copy_attr
 
 try:

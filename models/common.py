@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 
-from ..utils.general import non_max_suppression
+from partinet.DynamicDet.utils.general import non_max_suppression
 
 
 ##### basic ####

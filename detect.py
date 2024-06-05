@@ -9,12 +9,12 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from numpy import random
 
-from .models.yolo import Model
-from .utils.datasets import LoadStreams, LoadImages
-from .utils.general import check_img_size, check_imshow, non_max_suppression, \
+from partinet.DynamicDet.models.yolo import Model
+from partinet.DynamicDet.utils.datasets import LoadStreams, LoadImages
+from partinet.DynamicDet.utils.general import check_img_size, check_imshow, non_max_suppression, \
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path
-from .utils.plots import plot_one_box
-from .utils.torch_utils import select_device, time_synchronized, intersect_dicts
+from partinet.DynamicDet.utils.plots import plot_one_box
+from partinet.DynamicDet.utils.torch_utils import select_device, time_synchronized, intersect_dicts
 
 
 logger = logging.getLogger(__name__)
