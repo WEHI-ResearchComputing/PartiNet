@@ -1,0 +1,41 @@
+[project]
+name = "partinet"
+dynamic = ["version"]
+authors = [
+  { name="Mihin Perera", email="perera.m@wehi.edu.au" },
+  { name="Mansi Aggarwal", email="aggarwal.m@wehi.edu.au" },
+  { name="Ojasvi Jain", email="jain.o@wehi.edu.au" },
+  { name="Julie Iskander", email="iskander.j@wehi.edu.au" },
+  { name="Edward Yang", email="yang.e@wehi.edu.au" },
+  { name="Shabih Shakeel", email="shakeel.s@wehi.edu.au" },
+]
+maintainers = [
+    { name = "Mihin Perera", email="perera.m@wehi.edu.au" },
+    { name = "Julie Iskander", email="iskander.j@wehi.edu.au" },
+    { name = "Edward Yang", email="yang.e@wehi.edu.au" }
+]
+description = "A CryoEM particle picker tool based on DynamicDet"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.scripts]
+partinet = "partinet:main"
+
+[build-system]
+requires = ["setuptools", "Click"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["partinet"]
+[tools.setuptools.dynamic]
+version = {attr = "partinet.VERSION"}
+
+
+[project.urls]
+Homepage = "https://github.com/WEHI-ResearchComputing/PartiNet"
+Issues = "https://github.com/WEHI-ResearchComputing/PartiNet/issues"
