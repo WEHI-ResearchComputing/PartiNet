@@ -1,5 +1,7 @@
 import click
 
+VERSION = "0.0.1"
+
 @click.group()
 def main():
     pass
@@ -17,5 +19,7 @@ def train2():
     click.echo("This will perform DynamicDet training step 2.")
 
 @main.command()
-def infer():
-    click.echo("This will perform DynamicDet inference.")
+def detect():
+    from .DynamicDet.detect import detect as dd_detect
+    click.echo("This will perform DynamicDet detection.")
+    dd_detect()
