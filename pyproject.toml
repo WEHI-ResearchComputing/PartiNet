@@ -30,8 +30,10 @@ partinet = "partinet:main"
 requires = ["setuptools", "Click"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["partinet"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["partinet*"]
+
 [tools.setuptools.dynamic]
 version = {attr = "partinet.VERSION"}
 
