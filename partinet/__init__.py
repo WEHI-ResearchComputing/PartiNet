@@ -3,12 +3,12 @@ import sys
 
 __version__ = "0.0.1"
 
-def print_params():
+def print_params(params: dict) -> None:
     """
     Prints all the parameter-value pairs after cli processing with Click
     """
     all_params_str = ", ".join(
-        [f"{k}: {v}" for k, v in click.get_current_context().params.items()]
+        [f"{k}: {v}" for k, v in params.items()]
     )
     click.echo(all_params_str)
 
@@ -21,7 +21,7 @@ def main():
 def preprocess():
     click.echo("This will preprocess the micrographs.")
 
-@main.command()
+@main.group()
 @click.option('--cfg', type=str, help='model.yaml path', required=True)
 @click.option('--weight', type=str, help='initial weights path', required=True)
 @click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)
@@ -41,7 +41,6 @@ def preprocess():
 @click.option('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu', show_default=True)
 @click.option('--multi-scale', is_flag=True, help='vary img-size +/- 50%%')
 @click.option('--single-cls', is_flag=True, help='train multi-class data as single-class')
-@click.option('--single-backbone', is_flag=True, help='train single backbone model')
 @click.option('--adam', is_flag=True, help='use torch.optim.Adam() optimizer')
 @click.option('--sync-bn', is_flag=True, help='use SyncBatchNorm, only available in DDP mode')
 @click.option('--local_rank', type=int, default=-1, help='DDP parameter, do not modify', show_default=True)
@@ -51,7 +50,6 @@ def preprocess():
 @click.option('--name', default='exp', help='save to project/name', show_default=True)
 @click.option('--exist-ok', is_flag=True, help='existing project/name ok, do not increment')
 @click.option('--quad', is_flag=True, help='quad dataloader')
-@click.option('--linear-lr', is_flag=True, help='linear LR')
 @click.option('--label-smoothing', type=float, default=0.0, help='Label smoothing epsilon', show_default=True)
 @click.option('--upload_dataset', is_flag=True, help='Upload dataset as W&B artifact table')
 @click.option('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval for W&B', show_default=True)
@@ -59,19 +57,40 @@ def preprocess():
 @click.option('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used', show_default=True)
 @click.option('--freeze', multiple=True, type=int, default=[0], help='Freeze layers: backbone of yolov7=50, first3=0 1 2', show_default=True)
 @click.option('--v5-metric', is_flag=True, help='assume maximum recall as 1.0 in AP calculation', show_default=True)
-def train1(cfg, weight, data, hyp, epochs, batch_size, img_size, rect, resume, resume_ckpt, nosave, notest, noautoanchor, bucket, cache_images, image_weights, device, multi_scale, single_cls, single_backbone, adam, sync_bn, local_rank, workers, project, entity, name, exist_ok, quad, linear_lr, label_smoothing, upload_dataset, bbox_interval, save_period, artifact_alias, freeze, v5_metric):
+@click.pass_context
+def train(ctx, cfg, weight, data, hyp, epochs, batch_size, img_size, rect, resume, resume_ckpt, nosave, notest, noautoanchor, bucket, cache_images, image_weights, device, multi_scale, single_cls, adam, sync_bn, local_rank, workers, project, entity, name, exist_ok, quad, label_smoothing, upload_dataset, bbox_interval, save_period, artifact_alias, freeze, v5_metric):
+    # ensure that ctx.obj exists as dict
+    ctx.ensure_object(dict)
+    # add train args to ctx.obj, which will be passed to step1 and step2
+    ctx.obj.update(click.get_current_context().params)
+
+@train.command()
+@click.option('--single-backbone', is_flag=True, help='train single backbone model')
+@click.option('--linear-lr', is_flag=True, help='linear LR')
+@click.pass_context
+def step1(ctx, single_backbone, linear_lr):
+    # grab params from train group
+    params = ctx.obj
+    # update params with step1 params
+    params.update(ctx.params)
+
     click.echo("Performing DynamicDet training step 1 with config:\n    ", nl=False)
-    print_params()
+    print_params(params)
     import partinet.DynamicDet.train_step1
     import argparse
 
     # convert to argparse namespace since that's how DynamicDet is programmed
-    opt = argparse.Namespace(**click.get_current_context().params)
+    opt = argparse.Namespace(**params)
     partinet.DynamicDet.train_step1.main(opt)
 
-@main.command()
-def train2():
-    click.echo("This will perform DynamicDet training step 2.")
+@train.command()
+@click.pass_context
+def step2(ctx):
+    # grab params from train group (train step2 doesn't have special params)
+    params = ctx.obj
+
+    click.echo("Performing DynamicDet training step 2 with config:\n    ", nl=False)
+    print_params(params)
 
 @main.command()
 @click.option('--cfg', type=str, help='model.yaml path', required=True)
