@@ -34,9 +34,8 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["partinet*"]
 
-[tools.setuptools.dynamic]
-version = {attr = "partinet.VERSION"}
-
+[tool.setuptools.dynamic]
+version = {attr = "partinet.__version__"}
 
 [project.urls]
 Homepage = "https://github.com/WEHI-ResearchComputing/PartiNet"
