@@ -59,8 +59,15 @@ def preprocess():
 @click.option('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used', show_default=True)
 @click.option('--freeze', multiple=True, type=int, default=[0], help='Freeze layers: backbone of yolov7=50, first3=0 1 2', show_default=True)
 @click.option('--v5-metric', is_flag=True, help='assume maximum recall as 1.0 in AP calculation', show_default=True)
-def train1(cfg, weight, data, hyp, epocs, batch_size, img_size, rect, resume, resume_ckpt, nosave, notest, noautoanchor, bucket, cache_images, image_weights, device, multi_scale, single_cls, single_backbone, adam, sync_bn, local_rank, workers, project, entity, name, exist_ok, quad, linear_lr, label_smoothing, upload_dataset, bbox_interval, save_period, artifact_alias, freeze, v5_metric):
-    click.echo("This will perform DynamicDet training step 1.")
+def train1(cfg, weight, data, hyp, epochs, batch_size, img_size, rect, resume, resume_ckpt, nosave, notest, noautoanchor, bucket, cache_images, image_weights, device, multi_scale, single_cls, single_backbone, adam, sync_bn, local_rank, workers, project, entity, name, exist_ok, quad, linear_lr, label_smoothing, upload_dataset, bbox_interval, save_period, artifact_alias, freeze, v5_metric):
+    click.echo("Performing DynamicDet training step 1 with config:\n    ", nl=False)
+    print_params()
+    import partinet.DynamicDet.train_step1
+    import argparse
+
+    # convert to argparse namespace since that's how DynamicDet is programmed
+    opt = argparse.Namespace(**click.get_current_context().params)
+    partinet.DynamicDet.train_step1.main(opt)
 
 @main.command()
 def train2():
