@@ -1,7 +1,7 @@
 import click
 import sys
 
-VERSION = "0.0.1"
+__version__ = "0.0.1"
 
 def print_params():
     """
@@ -13,6 +13,7 @@ def print_params():
     click.echo(f"Invocation:\n    {all_params_str}")
 
 @click.group()
+@click.version_option(__version__)
 def main():
     pass
 
