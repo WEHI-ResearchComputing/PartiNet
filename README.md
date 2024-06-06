@@ -5,7 +5,7 @@ A particle picking tool that uses DynamicDet and trained on CryoPPP
 ## File structure
 * DynamicDet  --> submodule forked from [DynamicDet repo](https://github.com/VDIGPKU/DynamicDet)
 * scripts
-    * meta --> have text files that are include:
+    * meta --> have text files that include:
         * `datasets.txt` : preprocess script to choose datasets to denoise and calculate bounding box ()
         * `development_set.txt` & `test_set.txt` : preprocess script to split into development and test sets.
         * `fix_names_datasets.txt`: contain dataset names that reqiored manual intervention after download.
@@ -29,7 +29,7 @@ Example run found in `preprocess.py`
 
 ```
 
-./preprocess.py --dataset <dataset_name> --datasets_path /vast/scratch/users/iskander.j/PartiNet_data/testing/ --tag _test
+./preprocess.py --dataset <dataset_name> --datasets_path /vast/scratch/users/iskander.j/PartiNet_data/testing/ --tag _test --bounding_box
 
 ```
 
@@ -38,6 +38,7 @@ Example run found in `preprocess.py`
 * dataset: dataset name, e.g. 10005, and it must be a directory found in datasets_path
 * datasets_path: path to all datasets
 * tag: to add a suffix to text files used by script.
+* bounding_box: whether to run the calculate bounding box annotation step, default is false and will error if annotation directory is empty.
 
 #### How it works:
 First step is go to dataset path and create directory called `annotations` where bounding box data will be saved as `*.txt` files.
@@ -49,5 +50,5 @@ The script writes
 * development_set_split.txt: csv that saves dataset, number of annotated micrographs, number of images in training set, number of images in validation set,number of images in test set.
 
 
-
+**Note: There are a few manual steps required before running any preprocessing (https://github.com/WEHI-ResearchComputing/PartiNet/blob/main/scripts/meta/fix_names_datasets.txt)**
 
