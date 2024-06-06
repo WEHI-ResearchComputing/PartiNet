@@ -20,6 +20,7 @@ def main():
 @main.command()
 def preprocess():
     click.echo("This will preprocess the micrographs.")
+    raise NotImplementedError("Not implemented yet!")
 
 @main.group()
 @click.option('--cfg', type=str, help='model.yaml path', required=True)
