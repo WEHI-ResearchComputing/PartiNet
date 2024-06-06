@@ -74,13 +74,16 @@ def step1(ctx, single_backbone, linear_lr):
     # update params with step1 params
     params.update(ctx.params)
 
+    # dump params to terminal
     click.echo("Performing DynamicDet training step 1 with config:\n    ", nl=False)
     print_params(params)
-    import partinet.DynamicDet.train_step1
-    import argparse
 
-    # convert to argparse namespace since that's how DynamicDet is programmed
+    # convert params to argparse namespace since that's how DynamicDet is programmed
+    import argparse
     opt = argparse.Namespace(**params)
+
+    # run train_step1.py
+    import partinet.DynamicDet.train_step1
     partinet.DynamicDet.train_step1.main(opt)
 
 @train.command()
@@ -91,6 +94,14 @@ def step2(ctx):
 
     click.echo("Performing DynamicDet training step 2 with config:\n    ", nl=False)
     print_params(params)
+
+    # convert params to argparse namespace since that's how DynamicDet is programmed
+    import argparse
+    opt = argparse.Namespace(**params)
+
+    # run train_step1.py
+    import partinet.DynamicDet.train_step2
+    partinet.DynamicDet.train_step2.main(opt)
 
 @main.command()
 @click.option('--cfg', type=str, help='model.yaml path', required=True)
