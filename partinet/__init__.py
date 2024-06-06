@@ -10,7 +10,7 @@ def print_params():
     all_params_str = ", ".join(
         [f"{k}: {v}" for k, v in click.get_current_context().params.items()]
     )
-    click.echo(f"Invocation:\n    {all_params_str}")
+    click.echo(all_params_str)
 
 @click.group()
 @click.version_option(__version__)
@@ -51,10 +51,10 @@ def train2():
 @click.option('--dy-thres', type=float, default=0.5, help='dynamic thres', show_default=True)
 def detect(cfg, weight, num_classes, source, img_size, conf_thres, iou_thres, device, view_img, save_txt, save_conf, nosave, classes, agnostic_nms, augment, project, name, exist_ok, dy_thres):
 
+    click.echo("Performing DynamicDet detection with config:\n    ", nl=False)
     print_params()
 
     import partinet.DynamicDet.detect
-    click.echo("This will perform DynamicDet detection.")
     with partinet.DynamicDet.detect.torch.no_grad():
         partinet.DynamicDet.detect.detect(cfg, weight, num_classes, source, img_size, conf_thres, iou_thres, device, view_img, save_txt, save_conf, nosave, classes, agnostic_nms, augment, project, name, exist_ok, dy_thres)
 
