@@ -9,3 +9,4 @@
 11051, in tiff format so needed directory rename
 11056, in tiff format so needed directory rename
 11057, in tiff format so needed directory rename
+10059, deleted image 289,293, 294, 295 as not same size.

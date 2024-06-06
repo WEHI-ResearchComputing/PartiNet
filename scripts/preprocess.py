@@ -20,11 +20,11 @@ flags.DEFINE_string('dataset',None, 'Dataset name, should correspond to a direct
 flags.DEFINE_boolean('bounding_box',False,'whether to calculate bounding box')
 
 def validate_datasetname(path:str):
-    if not os.path.exists(os.path.join(FLAGS.datasets_path,path)):
+    if not os.path.exists(os.path.join(FLAGS.datasets_path,"raw",path)):
         return False
-    elif not os.path.exists(os.path.join(FLAGS.datasets_path,path,"denoised_micrographs")):
+    elif not os.path.exists(os.path.join(FLAGS.datasets_path,"raw",path,"denoised_micrographs")):
         return False
-    elif not os.path.exists(os.path.join(FLAGS.datasets_path,path,"ground_truth/particle_coordinates")):
+    elif not os.path.exists(os.path.join(FLAGS.datasets_path,"raw",path,"ground_truth/particle_coordinates")):
         return False
     else:
         return True
@@ -177,9 +177,9 @@ def main(argv):
     Path(os.path.join(datasplit_path,"labels","val_left")).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(datasplit_path,"labels","test_left")).mkdir(parents=True, exist_ok=True)
     # micrograph jpegs
-    images_dir = os.path.join(FLAGS.datasets_path,FLAGS.dataset,"denoised_micrographs","jpg")
+    images_dir = os.path.join(FLAGS.datasets_path,"raw",FLAGS.dataset,"denoised_micrographs","jpg")
     # ground truth coordinates in csv
-    coords_dir = os.path.join(FLAGS.datasets_path,FLAGS.dataset,"ground_truth/particle_coordinates")
+    coords_dir = os.path.join(FLAGS.datasets_path,"raw",FLAGS.dataset,"ground_truth/particle_coordinates")
     
     logging.info(f"Importing meta files, meta/development_set{FLAGS.tag}.txt and meta/test_set{FLAGS.tag}.txt ")
     dvset=pd.read_csv(f"meta/development_set{FLAGS.tag}.txt",names=['name','isnotused'])
@@ -197,9 +197,19 @@ def main(argv):
         logging.info(f"Dataset name {FLAGS.dataset} not found in lists. Please check your development and test lists, and try again.")
         return
     
-    annot_dir = os.path.join(FLAGS.datasets_path,FLAGS.dataset,"annotations")
-    annotated=calculate_bounding_box(images_dir, coords_dir, annot_dir)
-    logging.debug(f"set {set}, notused:{notused}, annotated:{annotated}")
+    annot_dir = os.path.join(FLAGS.datasets_path,"raw",FLAGS.dataset,"annotations")
+    if FLAGS.bounding_box:
+        
+        annotated=calculate_bounding_box(images_dir, coords_dir, annot_dir)
+        logging.debug(f"set {set}, notused:{notused}, annotated:{annotated}")
+    else:
+        if os.path.exists(annot_dir) and (len(os.listdir(annot_dir))>0):
+            logging.info("annotation file found")
+        else:
+            logging.error("Annotation not found, rerun with bounding_box flag to annotate images.")
+            return
+
+    
     train,val,test=prep_datasplit(images_dir, annot_dir, set,notused)
     with open("meta/development_set_split.txt", "a") as f:
             f.write(f"{FLAGS.dataset},{annotated},{train},{val},{test},\n")
