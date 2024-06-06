@@ -553,12 +553,12 @@ if __name__ == '__main__':
     opt = parser.parse_args()
 
     # Set DDP variables from environment variables set by torch.distributed.launch or torchrun
-    opt.local_rank = int(os.environ['LOCAL_RANK']) if 'LOCAL_RANK' in os.enriron else 0
+    opt.local_rank = int(os.environ['LOCAL_RANK']) if 'LOCAL_RANK' in os.enriron else -1
     opt.world_size = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     opt.global_rank = int(os.environ['RANK']) if 'RANK' in os.environ else -1
 
     # use OMPI variables if being run with OpenMPI mpi_run
-    opt.local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK']) if 'OMPI_COMM_WORLD_LOCAL_RANK' in os.enriron else 0
+    opt.local_rank = int(os.environ['OMPI_COMM_WORLD_LOCAL_RANK']) if 'OMPI_COMM_WORLD_LOCAL_RANK' in os.enriron else -1
     opt.world_size = int(os.environ['OMPI_COMM_WORLD_SIZE']) if 'OMPI_COMM_WORLD_SIZE' in os.environ else 1
     opt.global_rank = int(os.environ['OMPI_COMM_WORLD_RANK']) if 'OMPI_COMM_WORLD_RANK' in os.environ else -1
 
