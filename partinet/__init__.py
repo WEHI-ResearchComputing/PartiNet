@@ -126,7 +126,7 @@ def step2(ctx):
 def detect(cfg, weight, num_classes, source, img_size, conf_thres, iou_thres, device, view_img, save_txt, save_conf, nosave, classes, agnostic_nms, augment, project, name, exist_ok, dy_thres):
 
     click.echo("Performing DynamicDet detection with config:\n    ", nl=False)
-    print_params()
+    print_params(click.get_context().params)
 
     import partinet.DynamicDet.detect
     with partinet.DynamicDet.detect.torch.no_grad():
