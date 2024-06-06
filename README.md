@@ -1,8 +1,8 @@
 # PartiNet
 A particle picking tool that uses DynamicDet and trained on CryoPPP
 
-
 ## File structure
+
 * DynamicDet  --> submodule forked from [DynamicDet repo](https://github.com/VDIGPKU/DynamicDet)
 * scripts
     * meta --> have text files that include:
@@ -19,8 +19,34 @@ A particle picking tool that uses DynamicDet and trained on CryoPPP
     * `detect` --> ??
     * `train_step1` and `train_step2`  --> ??
 
+## Install
+
+```bash
+git clone --recursive -b detect-train-refactor git@github.com:WEHI-ResearchComputing/PartiNet.git
+cd PartiNet
+pip install .
+```
+
 ## Usage
+
+```bash
+partinet --help
+```
+```
+Usage: partinet [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --version  Show the version and exit.
+  --help     Show this message and exit.
+
+Commands:
+  detect
+  preprocess
+  train
+```
+
 ### Preprocessing
+
 This step runs on one dataset to creating bounding boxes and split images into development and test sets.
 
 The Python script uses the conda env installed `/stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/envs/py3_11/bin/python3`
@@ -28,9 +54,7 @@ The Python script uses the conda env installed `/stornext/System/data/apps/rc-to
 Example run found in `preprocess.py`
 
 ```
-
 ./preprocess.py --dataset <dataset_name> --datasets_path /vast/scratch/users/iskander.j/PartiNet_data/testing/ --tag _test --bounding_box
-
 ```
 
 #### Arguments:
@@ -49,6 +73,129 @@ The script writes
 * noannot_images.txt: for each dataset, list of micrographs without annotation.
 * development_set_split.txt: csv that saves dataset, number of annotated micrographs, number of images in training set, number of images in validation set,number of images in test set.
 
-
 **Note: There are a few manual steps required before running any preprocessing (https://github.com/WEHI-ResearchComputing/PartiNet/blob/main/scripts/meta/fix_names_datasets.txt)**
 
+### Training
+
+Training the DynamicDet network is seperated into two steps and therefore two subcommands:
+
+```bash
+partinet train --help
+```
+```
+Usage: partinet train [OPTIONS] COMMAND [ARGS]...
+
+Options:
+  --cfg TEXT               model.yaml path  [required]
+  --weight TEXT            initial weights path  [required]
+  --data TEXT              data.yaml path  [default: data/coco.yaml]
+  --hyp TEXT               hyperparameters path  [default:
+                           hyp/hyp.scratch.p5.yaml]
+  --epochs INTEGER         [default: 300]
+  --batch-size INTEGER     total batch size for all GPUs  [default: 16]
+  --img-size INTEGER...    [train, test] image sizes  [default: 640, 640]
+  --rect                   rectangular training
+  --resume                 resume most recent training
+  --resume-ckpt TEXT       checkpoint to resume from
+  --nosave                 only save final checkpoint
+  --notest                 only test final epoch
+  --noautoanchor           disable autoanchor check
+  --bucket TEXT            gsutil bucket
+  --cache-images           cache images for faster training
+  --image-weights          use weighted image selection for training
+  --device TEXT            cuda device, i.e. 0 or 0,1,2,3 or cpu
+  --multi-scale            vary img-size +/- 50%%
+  --single-cls             train multi-class data as single-class
+  --adam                   use torch.optim.Adam() optimizer
+  --sync-bn                use SyncBatchNorm, only available in DDP mode
+  --local_rank INTEGER     DDP parameter, do not modify  [default: -1]
+  --workers INTEGER        maximum number of dataloader workers  [default: 8]
+  --project TEXT           save to project/name  [default: runs/train]
+  --entity TEXT            W&B entity
+  --name TEXT              save to project/name  [default: exp]
+  --exist-ok               existing project/name ok, do not increment
+  --quad                   quad dataloader
+  --label-smoothing FLOAT  Label smoothing epsilon  [default: 0.0]
+  --upload_dataset         Upload dataset as W&B artifact table
+  --bbox_interval INTEGER  Set bounding-box image logging interval for W&B
+                           [default: -1]
+  --save_period INTEGER    Log model after every "save_period" epoch
+                           [default: -1]
+  --artifact_alias TEXT    version of dataset artifact to be used  [default:
+                           latest]
+  --freeze INTEGER         Freeze layers: backbone of yolov7=50, first3=0 1 2
+                           [default: 0]
+  --v5-metric              assume maximum recall as 1.0 in AP calculation
+  --help                   Show this message and exit.
+
+Commands:
+  step1
+  step2
+```
+
+#### Training Step 1
+
+relevant training args are passed to the `train` subcommand with step1 specific args passed to the
+`step1` subsubcommand.
+
+```bash
+partinet train --cfg <cfg> --weight <weights> ... step1 --help
+```
+```
+Usage: partinet train step1 [OPTIONS]
+
+Options:
+  --single-backbone  train single backbone model
+  --linear-lr        linear LR
+  --help             Show this message and exit.
+```
+
+TODO: more details...
+
+#### Training Step 2
+
+Like step1, training args are passed to `train`, but no special arguments are passed to the `step2`
+subsubcommand.
+
+```bash
+Usage: partinet train step2 [OPTIONS]
+
+Options:
+  --help  Show this message and exit.
+```
+
+TODO: more details...
+
+## Detection
+
+```bash
+partinet detect --help
+```
+```
+Usage: partinet detect [OPTIONS]
+
+Options:
+  --cfg TEXT             model.yaml path  [required]
+  --weight TEXT          model.pt path(s)  [required]
+  --source TEXT          source  [default: inference/images]
+  --num-classes INTEGER  number of classes  [default: 80]
+  --img-size INTEGER     inference size (pixels)  [default: 640]
+  --conf-thres FLOAT     object confidence threshold  [default: 0.25]
+  --iou-thres FLOAT      IOU threshold for NMS  [default: 0.45]
+  --device TEXT          cuda device, i.e. 0 or 0,1,2,3 or cpu
+  --view-img             display results
+  --save-txt             save results to *.txt
+  --save-conf            save confidences in --save-txt labels
+  --nosave               do not save images/videos
+  --classes INTEGER      filter by class: --classes 0, or --classes 0
+                         --classes 2 --classes 3
+  --agnostic-nms         class-agnostic NMS
+  --augment              augmented inference
+  --project TEXT         save results to project/name  [default: runs/detect]
+  --name TEXT            save results to project/name  [default: exp]
+  --exist-ok             existing project/name ok, do not increment
+  --dy-thres FLOAT       dynamic thres  [default: 0.5]
+  --help                 Show this message and exit.
+```
+
+TODO: more details...
