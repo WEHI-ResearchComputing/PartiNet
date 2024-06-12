@@ -12,6 +12,46 @@ def print_params(params: dict) -> None:
     )
     click.echo(all_params_str)
 
+def train_common_args(f):
+
+    f = click.option('--v5-metric', is_flag=True, help='assume maximum recall as 1.0 in AP calculation', show_default=True)(f)
+    f = click.option('--freeze', multiple=True, type=int, default=[0], help='Freeze layers: backbone of yolov7=50, first3=0 1 2', show_default=True)(f)
+    f = click.option('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used', show_default=True)(f)
+    f = click.option('--save_period', type=int, default=-1, help='Log model after every "save_period" epoch', show_default=True)(f)
+    f = click.option('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval for W&B', show_default=True)(f)
+    f = click.option('--upload_dataset', is_flag=True, help='Upload dataset as W&B artifact table')(f)
+    f = click.option('--label-smoothing', type=float, default=0.0, help='Label smoothing epsilon', show_default=True)(f)
+    f = click.option('--quad', is_flag=True, help='quad dataloader')(f)
+    f = click.option('--exist-ok', is_flag=True, help='existing project/name ok, do not increment')(f)
+    f = click.option('--name', default='exp', help='save to project/name', show_default=True)(f)
+    f = click.option('--entity', default=None, help='W&B entity', show_default=True)(f)
+    f = click.option('--project', default='runs/train', help='save to project/name', show_default=True)(f)
+    f = click.option('--workers', type=int, default=8, help='maximum number of dataloader workers', show_default=True)(f)
+    f = click.option('--local_rank', type=int, default=-1, help='DDP parameter, do not modify', show_default=True)(f)
+    f = click.option('--sync-bn', is_flag=True, help='use SyncBatchNorm, only available in DDP mode')(f)
+    f = click.option('--adam', is_flag=True, help='use torch.optim.Adam() optimizer')(f)
+    f = click.option('--single-cls', is_flag=True, help='train multi-class data as single-class')(f)
+    f = click.option('--multi-scale', is_flag=True, help='vary img-size +/- 50%%')(f)
+    f = click.option('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu', show_default=True)(f)
+    f = click.option('--image-weights', is_flag=True, help='use weighted image selection for training')(f)
+    f = click.option('--cache-images', is_flag=True, help='cache images for faster training')(f)
+    f = click.option('--bucket', type=str, default='', help='gsutil bucket')(f)
+    f = click.option('--noautoanchor', is_flag=True, help='disable autoanchor check')(f)
+    f = click.option('--notest', is_flag=True, help='only test final epoch')(f)
+    f = click.option('--nosave', is_flag=True, help='only save final checkpoint')(f)
+    f = click.option('--resume-ckpt', type=str, default='', help='checkpoint to resume from')(f)
+    f = click.option('--resume', is_flag=True, help='resume most recent training')(f)
+    f = click.option('--rect', is_flag=True, help='rectangular training')(f)
+    f = click.option('--img-size', nargs=2, type=int, default=[640, 640], help='[train, test] image sizes', show_default=True)(f)
+    f = click.option('--batch-size', type=int, default=16, help='total batch size for all GPUs', show_default=True)(f)
+    f = click.option('--epochs', type=int, default=300, show_default=True)(f)
+    f = click.option('--hyp', type=str, default='hyp/hyp.scratch.p5.yaml', help='hyperparameters path', show_default=True)(f)
+    f = click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)(f)
+    f = click.option('--weight', type=str, help='initial weights path', required=True)(f)
+    f = click.option('--cfg', type=str, help='model.yaml path', required=True)(f)
+
+    return f
+
 @click.group()
 @click.version_option(__version__)
 def main():
@@ -23,57 +63,14 @@ def preprocess():
     raise NotImplementedError("Not implemented yet!")
 
 @main.group()
-@click.option('--cfg', type=str, help='model.yaml path', required=True)
-@click.option('--weight', type=str, help='initial weights path', required=True)
-@click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)
-@click.option('--hyp', type=str, default='hyp/hyp.scratch.p5.yaml', help='hyperparameters path', show_default=True)
-@click.option('--epochs', type=int, default=300, show_default=True)
-@click.option('--batch-size', type=int, default=16, help='total batch size for all GPUs', show_default=True)
-@click.option('--img-size', nargs=2, type=int, default=[640, 640], help='[train, test] image sizes', show_default=True)
-@click.option('--rect', is_flag=True, help='rectangular training')
-@click.option('--resume', is_flag=True, help='resume most recent training')
-@click.option('--resume-ckpt', type=str, default='', help='checkpoint to resume from')
-@click.option('--nosave', is_flag=True, help='only save final checkpoint')
-@click.option('--notest', is_flag=True, help='only test final epoch')
-@click.option('--noautoanchor', is_flag=True, help='disable autoanchor check')
-@click.option('--bucket', type=str, default='', help='gsutil bucket')
-@click.option('--cache-images', is_flag=True, help='cache images for faster training')
-@click.option('--image-weights', is_flag=True, help='use weighted image selection for training')
-@click.option('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu', show_default=True)
-@click.option('--multi-scale', is_flag=True, help='vary img-size +/- 50%%')
-@click.option('--single-cls', is_flag=True, help='train multi-class data as single-class')
-@click.option('--adam', is_flag=True, help='use torch.optim.Adam() optimizer')
-@click.option('--sync-bn', is_flag=True, help='use SyncBatchNorm, only available in DDP mode')
-@click.option('--local_rank', type=int, default=-1, help='DDP parameter, do not modify', show_default=True)
-@click.option('--workers', type=int, default=8, help='maximum number of dataloader workers', show_default=True)
-@click.option('--project', default='runs/train', help='save to project/name', show_default=True)
-@click.option('--entity', default=None, help='W&B entity', show_default=True)
-@click.option('--name', default='exp', help='save to project/name', show_default=True)
-@click.option('--exist-ok', is_flag=True, help='existing project/name ok, do not increment')
-@click.option('--quad', is_flag=True, help='quad dataloader')
-@click.option('--label-smoothing', type=float, default=0.0, help='Label smoothing epsilon', show_default=True)
-@click.option('--upload_dataset', is_flag=True, help='Upload dataset as W&B artifact table')
-@click.option('--bbox_interval', type=int, default=-1, help='Set bounding-box image logging interval for W&B', show_default=True)
-@click.option('--save_period', type=int, default=-1, help='Log model after every "save_period" epoch', show_default=True)
-@click.option('--artifact_alias', type=str, default="latest", help='version of dataset artifact to be used', show_default=True)
-@click.option('--freeze', multiple=True, type=int, default=[0], help='Freeze layers: backbone of yolov7=50, first3=0 1 2', show_default=True)
-@click.option('--v5-metric', is_flag=True, help='assume maximum recall as 1.0 in AP calculation', show_default=True)
-@click.pass_context
-def train(ctx, cfg, weight, data, hyp, epochs, batch_size, img_size, rect, resume, resume_ckpt, nosave, notest, noautoanchor, bucket, cache_images, image_weights, device, multi_scale, single_cls, adam, sync_bn, local_rank, workers, project, entity, name, exist_ok, quad, label_smoothing, upload_dataset, bbox_interval, save_period, artifact_alias, freeze, v5_metric):
-    # ensure that ctx.obj exists as dict
-    ctx.ensure_object(dict)
-    # add train args to ctx.obj, which will be passed to step1 and step2
-    ctx.obj.update(click.get_current_context().params)
+def train():
+    pass
 
 @train.command()
+@train_common_args
 @click.option('--single-backbone', is_flag=True, help='train single backbone model')
 @click.option('--linear-lr', is_flag=True, help='linear LR')
-@click.pass_context
-def step1(ctx, single_backbone, linear_lr):
-    # grab params from train group
-    params = ctx.obj
-    # update params with step1 params
-    params.update(ctx.params)
+def step1(**params):
 
     # dump params to terminal
     click.echo("Performing DynamicDet training step 1 with config:\n    ", nl=False)
@@ -88,10 +85,8 @@ def step1(ctx, single_backbone, linear_lr):
     partinet.DynamicDet.train_step1.main(opt)
 
 @train.command()
-@click.pass_context
-def step2(ctx):
-    # grab params from train group (train step2 doesn't have special params)
-    params = ctx.obj
+@train_common_args
+def step2(**params):
 
     click.echo("Performing DynamicDet training step 2 with config:\n    ", nl=False)
     print_params(params)
