@@ -157,7 +157,7 @@ TODO: more details...
 Like step1, training args are passed to `train`, but no special arguments are passed to the `step2`
 subsubcommand.
 
-```bash
+```output
 Usage: partinet train step2 [OPTIONS]
 
 Options:
