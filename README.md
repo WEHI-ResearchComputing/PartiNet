@@ -86,6 +86,81 @@ partinet train --help
 Usage: partinet train [OPTIONS] COMMAND [ARGS]...
 
 Options:
+  --help  Show this message and exit.
+
+Commands:
+  step1
+  step2
+```
+
+#### Training Step 1
+
+relevant training args are passed to the `train` subcommand with step1 specific args passed to the
+`step1` subsubcommand.
+
+```bash
+partinet train step1 --help
+```
+```
+Usage: partinet train step1 [OPTIONS]
+
+Options:
+  --cfg TEXT               model.yaml path  [required]
+  --weight TEXT            initial weights path  [required]
+  --data TEXT              data.yaml path  [default: data/coco.yaml]
+  --hyp TEXT               hyperparameters path  [default:
+                           hyp/hyp.scratch.p5.yaml]
+  --epochs INTEGER         [default: 300]
+  --batch-size INTEGER     total batch size for all GPUs  [default: 16]
+  --img-size INTEGER...    [train, test] image sizes  [default: 640, 640]
+  --rect                   rectangular training
+  --resume                 resume most recent training
+  --resume-ckpt TEXT       checkpoint to resume from
+  --nosave                 only save final checkpoint
+  --notest                 only test final epoch
+  --noautoanchor           disable autoanchor check
+  --bucket TEXT            gsutil bucket
+  --cache-images           cache images for faster training
+  --image-weights          use weighted image selection for training
+  --device TEXT            cuda device, i.e. 0 or 0,1,2,3 or cpu
+  --multi-scale            vary img-size +/- 50%%
+  --single-cls             train multi-class data as single-class
+  --adam                   use torch.optim.Adam() optimizer
+  --sync-bn                use SyncBatchNorm, only available in DDP mode
+  --local_rank INTEGER     DDP parameter, do not modify  [default: -1]
+  --workers INTEGER        maximum number of dataloader workers  [default: 8]
+  --project TEXT           save to project/name  [default: runs/train]
+  --entity TEXT            W&B entity
+  --name TEXT              save to project/name  [default: exp]
+  --exist-ok               existing project/name ok, do not increment
+  --quad                   quad dataloader
+  --label-smoothing FLOAT  Label smoothing epsilon  [default: 0.0]
+  --upload_dataset         Upload dataset as W&B artifact table
+  --bbox_interval INTEGER  Set bounding-box image logging interval for W&B
+                           [default: -1]
+  --save_period INTEGER    Log model after every "save_period" epoch
+                           [default: -1]
+  --artifact_alias TEXT    version of dataset artifact to be used  [default:
+                           latest]
+  --freeze INTEGER         Freeze layers: backbone of yolov7=50, first3=0 1 2
+                           [default: 0]
+  --v5-metric              assume maximum recall as 1.0 in AP calculation
+  --single-backbone        train single backbone model
+  --linear-lr              linear LR
+  --help                   Show this message and exit.
+```
+
+TODO: more details...
+
+#### Training Step 2
+
+Like step1, training args are passed to `train`, but no special arguments are passed to the `step2`
+subsubcommand.
+
+```bash
+Usage: partinet train step2 [OPTIONS]
+
+Options:
   --cfg TEXT               model.yaml path  [required]
   --weight TEXT            initial weights path  [required]
   --data TEXT              data.yaml path  [default: data/coco.yaml]
@@ -127,41 +202,6 @@ Options:
                            [default: 0]
   --v5-metric              assume maximum recall as 1.0 in AP calculation
   --help                   Show this message and exit.
-
-Commands:
-  step1
-  step2
-```
-
-#### Training Step 1
-
-relevant training args are passed to the `train` subcommand with step1 specific args passed to the
-`step1` subsubcommand.
-
-```bash
-partinet train --cfg <cfg> --weight <weights> ... step1 --help
-```
-```
-Usage: partinet train step1 [OPTIONS]
-
-Options:
-  --single-backbone  train single backbone model
-  --linear-lr        linear LR
-  --help             Show this message and exit.
-```
-
-TODO: more details...
-
-#### Training Step 2
-
-Like step1, training args are passed to `train`, but no special arguments are passed to the `step2`
-subsubcommand.
-
-```bash
-Usage: partinet train step2 [OPTIONS]
-
-Options:
-  --help  Show this message and exit.
 ```
 
 TODO: more details...
