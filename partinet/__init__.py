@@ -74,6 +74,7 @@ def step1(**params):
 
     # dump params to terminal
     click.echo("Performing DynamicDet training step 1 with config:\n    ", nl=False)
+    params["img_size"] = list(params["img_size"])
     print_params(params)
 
     # convert params to argparse namespace since that's how DynamicDet is programmed
@@ -89,6 +90,7 @@ def step1(**params):
 def step2(**params):
 
     click.echo("Performing DynamicDet training step 2 with config:\n    ", nl=False)
+    params["img_size"] = list(params["img_size"])
     print_params(params)
 
     # convert params to argparse namespace since that's how DynamicDet is programmed
