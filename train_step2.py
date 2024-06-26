@@ -21,7 +21,7 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 
-import test  # import test.py to get mAP after each epoch
+from partinet.DynamicDet import test  # import test.py to get mAP after each epoch
 from partinet.DynamicDet.models.yolo import Model
 from partinet.DynamicDet.utils.autoanchor import check_anchors
 from partinet.DynamicDet.utils.datasets import create_dataloader
