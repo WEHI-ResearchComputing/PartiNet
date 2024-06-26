@@ -10,13 +10,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from models.yolo import Model
-from utils.datasets import create_dataloader
-from utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size, \
+from partinet.DynamicDet.models.yolo import Model
+from partinet.DynamicDet.utils.datasets import create_dataloader
+from partinet.DynamicDet.utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size, \
     box_iou, non_max_suppression, scale_coords, xyxy2xywh, xywh2xyxy, set_logging, increment_path, colorstr
-from utils.metrics import ap_per_class, ConfusionMatrix
-from utils.plots import plot_images, output_to_target
-from utils.torch_utils import select_device, time_synchronized, intersect_dicts
+from partinet.DynamicDet.utils.metrics import ap_per_class, ConfusionMatrix
+from partinet.DynamicDet.utils.plots import plot_images, output_to_target
+from partinet.DynamicDet.utils.torch_utils import select_device, time_synchronized, intersect_dicts
 
 
 logger = logging.getLogger(__name__)
