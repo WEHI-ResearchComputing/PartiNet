@@ -121,14 +121,17 @@ def step2(**params):
 @click.option('--name', default='exp', help='save results to project/name', show_default=True)
 @click.option('--exist-ok', is_flag=True, help='existing project/name ok, do not increment')
 @click.option('--dy-thres', type=float, default=0.5, help='dynamic thres', show_default=True)
-def detect(cfg, weight, num_classes, source, img_size, conf_thres, iou_thres, device, view_img, save_txt, save_conf, nosave, classes, agnostic_nms, augment, project, name, exist_ok, dy_thres):
+def detect(**params):
 
     click.echo("Performing DynamicDet detection with config:\n    ", nl=False)
-    print_params(click.get_context().params)
+    print_params(params)
+
+    import argparse
+    opt = argparse.Namespace(**params)
 
     import partinet.DynamicDet.detect
     with partinet.DynamicDet.detect.torch.no_grad():
-        partinet.DynamicDet.detect.detect(cfg, weight, num_classes, source, img_size, conf_thres, iou_thres, device, view_img, save_txt, save_conf, nosave, classes, agnostic_nms, augment, project, name, exist_ok, dy_thres)
+        partinet.DynamicDet.detect.detect(opt)
 
 if __name__ == "__main__":
     main()
