@@ -19,21 +19,20 @@ from partinet.DynamicDet.utils.torch_utils import select_device, time_synchroniz
 
 logger = logging.getLogger(__name__)
 
-def detect(cfg, weight, nc, source, imgsz, conf_thres, iou_thres, device, view_img, save_txt, save_conf, nosave, classes, agnostic_nms, augment, project, name, exist_ok, dy_thres, save_img=False):
-    # source, cfg, weight, view_img, save_txt, nc, imgsz = opt.source, opt.cfg, opt.weight, \
-    #     opt.view_img, opt.save_txt, opt.num_classes, opt.img_size
-    save_img = not nosave and not source.endswith('.txt')  # save inference images
+def detect(opt, save_img=False):
+    source, cfg, weight, view_img, save_txt, nc, imgsz = opt.source, opt.cfg, opt.weight, \
+        opt.view_img, opt.save_txt, opt.num_classes, opt.img_size
+    save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
-        ('rtsp://', 'rtmp://', 'http://', 'https://')
-    )
+        ('rtsp://', 'rtmp://', 'http://', 'https://'))
 
     # Directories
-    save_dir = Path(increment_path(Path(project) / name, exist_ok=exist_ok))  # increment run
+    save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
     # Initialize
     set_logging()
-    device = select_device(device)
+    device = select_device(opt.device)
     half = device.type != 'cpu'  # half precision only supported on CUDA
 
     # Load model
@@ -57,8 +56,8 @@ def detect(cfg, weight, nc, source, imgsz, conf_thres, iou_thres, device, view_i
     imgsz = check_img_size(imgsz, s=stride)  # check img_size
 
     if hasattr(model, 'dy_thres'):
-        model.dy_thres = dy_thres
-        logger.info('Set dynamic threshold to %f' % dy_thres)
+        model.dy_thres = opt.dy_thres
+        logger.info('Set dynamic threshold to %f' % opt.dy_thres)
 
     if half:
         model.half()  # to FP16
@@ -96,16 +95,16 @@ def detect(cfg, weight, nc, source, imgsz, conf_thres, iou_thres, device, view_i
             old_img_h = img.shape[2]
             old_img_w = img.shape[3]
             for i in range(3):
-                model(img, augment=augment)[0]
+                model(img, augment=opt.augment)[0]
 
         # Inference
         t1 = time_synchronized()
         with torch.no_grad():   # Calculating gradients would cause a GPU memory leak
-            pred = model(img, augment=augment)[0]
+            pred = model(img, augment=opt.augment)[0]
         t2 = time_synchronized()
 
         # Apply NMS
-        pred = non_max_suppression(pred, conf_thres, iou_thres, classes=classes, agnostic=agnostic_nms)
+        pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
         t3 = time_synchronized()
 
         # Process detections
@@ -132,7 +131,7 @@ def detect(cfg, weight, nc, source, imgsz, conf_thres, iou_thres, device, view_i
                 for *xyxy, conf, cls in reversed(det):
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
+                        line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
