@@ -4,6 +4,7 @@
 10576, in tiff format so needed directory rename
 10671, in tiff format so needed directory rename
 10737, in tiff format so needed directory rename
+10737, missing ground truth, download from https://zenodo.org/records/7934683
 10816, in tiff format so needed directory rename
 10852, in tiff format so needed directory rename
 11051, in tiff format so needed directory rename

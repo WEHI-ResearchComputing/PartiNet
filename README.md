@@ -9,7 +9,12 @@ A particle picking tool that uses DynamicDet and trained on CryoPPP
         * `datasets.txt` : preprocess script to choose datasets to denoise and calculate bounding box ()
         * `development_set.txt` & `test_set.txt` : preprocess script to split into development and test sets.
         * `fix_names_datasets.txt`: contain dataset names that reqiored manual intervention after download.
-    *`download.sh` : Slurm job to get dataset name then download and untar.
+    * `download.sh` : Slurm job to get dataset name then download and untar. 
+    You can also retrieve from RCP a tarred file`raw.tar.gz` with all datasets and untar then using 
+            ```
+            for f in /vast/projects/RCP/PartiNet_data/tarred/*.tar.gz; do tar xvf "$f"; done
+            ```
+
     * `visualise_denoise_reaults.ipynb` : for checking results visually.
     *  `preprocess.sh`: Slurm job that runs 
         * topaz denoising 
