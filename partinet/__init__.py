@@ -123,6 +123,12 @@ def step2(**params):
 @click.option('--dy-thres', type=float, default=0.5, help='dynamic thres', show_default=True)
 def detect(**params):
 
+    # Setting classes to None when classes is not used.
+    # This is needed because Click's default for multiple args is a list/tuple (no choice here).
+    # a function in detect interprets this as "no classes" whereas None is interprted as
+    # "all classes"
+    params["classes"] = params["classes"] or None
+
     click.echo("Performing DynamicDet detection with config:\n    ", nl=False)
     print_params(params)
 
