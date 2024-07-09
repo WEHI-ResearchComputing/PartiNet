@@ -156,7 +156,11 @@ Options:
 ```
 
 TODO: more details...
+Example
+```
+partinet train step1 --cfg partinet/DynamicDet/cfg/dy-yolov7-step1.yaml --weight '' --data path/to/cryo_training.yaml --hyp partinet/DynamicDet/hyp/hyp.scratch.p5.yaml --name train_step1 --save_period 10 --epochs 20 --batch-size 16 --img-size 640 640 --workers 16 --device 0,1,2,3 --sync-bn
 
+```
 #### Training Step 2
 
 Like step1, training args are passed to `train`, but no special arguments are passed to the `step2`
@@ -210,7 +214,10 @@ Options:
 ```
 
 TODO: more details...
-
+Example
+```bash
+partinet train step2 --cfg partinet/DynamicDet/cfg/dy-yolov7-step2.yaml --weight /path/to/runs/train/train-step1-300epochs/weights/last.pt --workers 4 --device 0 --batch-size 1 --epochs 10 --img-size 640 640  --adam --data /path/to/cryo_training_all.yaml --hyp partinet/DynamicDet/hyp/hyp.finetune.dynamic.adam.yaml --name train_step2
+```
 ## Detection
 
 ```bash
