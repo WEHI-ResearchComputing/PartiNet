@@ -27,7 +27,7 @@ A particle picking tool that uses DynamicDet and trained on CryoPPP
 ## Install
 
 ```bash
-git clone --recursive -b detect-train-refactor git@github.com:WEHI-ResearchComputing/PartiNet.git
+git clone --recursive git@github.com:WEHI-ResearchComputing/PartiNet.git
 cd PartiNet
 pip install .
 ```
