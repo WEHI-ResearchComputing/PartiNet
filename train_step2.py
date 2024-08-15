@@ -21,6 +21,7 @@ from torch.cuda import amp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.tensorboard import SummaryWriter
 
+import partinet.DynamicDet
 from partinet.DynamicDet import test  # import test.py to get mAP after each epoch
 from partinet.DynamicDet.models.yolo import Model
 from partinet.DynamicDet.utils.autoanchor import check_anchors
@@ -37,7 +38,7 @@ from partinet.DynamicDet.utils.checkpoint import get_state_dict
 
 logger = logging.getLogger(__name__)
 
-def train(hyp, opt, device, tb_writer=None):
+def train(hyp, opt, device, cfg, tb_writer=None):
     logger.info(colorstr('hyperparameters: ') + ', '.join(f'{k}={v}' for k, v in hyp.items()))
     save_dir, epochs, batch_size, total_batch_size, weight, rank, freeze = \
         Path(opt.save_dir), opt.epochs, opt.batch_size, opt.total_batch_size, opt.weight, opt.global_rank, opt.freeze
@@ -56,7 +57,7 @@ def train(hyp, opt, device, tb_writer=None):
         yaml.dump(vars(opt), f, sort_keys=False)
     if not opt.resume:
         with open(save_dir / 'cfg.yaml', 'w') as f_d:
-            with open(opt.cfg) as f_s:
+            with open(cfg) as f_s:
                 cfg_yaml = yaml.load(f_s, Loader=yaml.SafeLoader)
             yaml.dump(cfg_yaml, f_d, sort_keys=False)
 
@@ -88,14 +89,14 @@ def train(hyp, opt, device, tb_writer=None):
     if pretrained:
         ckpt = torch.load(weight, map_location='cpu')  # load checkpoint
         state_dict = ckpt['model']
-        model = Model(opt.cfg, ch=3, nc=nc)  # create
-        exclude = ['anchor'] if (opt.cfg or hyp.get('anchors')) and not opt.resume else []  # exclude keys
+        model = Model(cfg, ch=3, nc=nc)  # create
+        exclude = ['anchor'] if (cfg or hyp.get('anchors')) and not opt.resume else []  # exclude keys
         state_dict = intersect_dicts(state_dict, model.state_dict(), exclude=exclude)  # intersect
         model.load_state_dict(state_dict, strict=False)  # load
         model.to(device)
         logger.info('Transferred %g/%g items from %s' % (len(state_dict), len(model.state_dict()), weight))  # report
     else:
-        model = Model(opt.cfg, ch=3, nc=nc).to(device)  # create
+        model = Model(cfg, ch=3, nc=nc).to(device)  # create
     with torch_distributed_zero_first(rank):
         check_dataset(data_dict)  # check
     train_path = data_dict['train']
@@ -468,20 +469,21 @@ def main(opt):
 
     # Resume
     wandb_run = check_wandb_resume(opt)
+    cfg = os.path.join(partinet.DynamicDet.__path__[0], "cfg", f"dy-{opt.backbone_detector}-step2.yaml")
     if opt.resume and not wandb_run:  # resume an interrupted run
         ckpt = opt.resume if isinstance(opt.resume, str) else get_latest_run()  # specified or most recent path
         assert os.path.isfile(ckpt), 'ERROR: --resume checkpoint does not exist'
         apriori = opt.global_rank, opt.local_rank
         with open(Path(ckpt).parent.parent / 'opt.yaml') as f:
             opt = argparse.Namespace(**yaml.load(f, Loader=yaml.SafeLoader))  # replace
-        opt.cfg, opt.weight, opt.resume = os.path.relpath(Path(ckpt).parent.parent / 'cfg.yaml'), ckpt, True
+        cfg, opt.weight, opt.resume = os.path.relpath(Path(ckpt).parent.parent / 'cfg.yaml'), ckpt, True
         opt.batch_size, opt.global_rank, opt.local_rank = opt.total_batch_size, *apriori  # reinstate
         opt.save_dir = os.path.relpath(Path(ckpt).parent.parent)
         logger.info('Resuming training from %s' % ckpt)
     else:
         # opt.hyp = opt.hyp or ('hyp.finetune.yaml' if opt.weights else 'hyp.scratch.yaml')
-        opt.data, opt.cfg, opt.hyp = check_file(opt.data), check_file(opt.cfg), check_file(opt.hyp)  # check files
-        assert len(opt.cfg), 'cfg must be specified'
+        opt.data, cfg, opt.hyp = check_file(opt.data), check_file(cfg), check_file(opt.hyp)  # check files
+        assert len(cfg), 'cfg must be specified'
         opt.img_size.extend([opt.img_size[-1]] * (2 - len(opt.img_size)))  # extend to 2 sizes (train, test)
         opt.save_dir = increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok)  # increment run
 
@@ -509,4 +511,4 @@ def main(opt):
         prefix = colorstr('tensorboard: ')
         logger.info(f"{prefix}Start with 'tensorboard --logdir {opt.project}', view at http://localhost:6006/")
         tb_writer = SummaryWriter(opt.save_dir)  # Tensorboard
-    train(hyp, opt, device, tb_writer)
+    train(hyp, opt, device, cfg, tb_writer)
