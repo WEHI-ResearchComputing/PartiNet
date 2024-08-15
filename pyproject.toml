@@ -52,7 +52,7 @@ where = ["."]
 include = ["partinet*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.yaml"]
+"*" = ["dy-*.yaml", "hyp.*.yaml"]
 
 [tool.setuptools.dynamic]
 version = {attr = "partinet.__version__"}

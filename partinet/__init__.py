@@ -45,7 +45,7 @@ def train_common_args(f):
     f = click.option('--img-size', nargs=2, type=int, default=[640, 640], help='[train, test] image sizes', show_default=True)(f)
     f = click.option('--batch-size', type=int, default=16, help='total batch size for all GPUs', show_default=True)(f)
     f = click.option('--epochs', type=int, default=300, show_default=True)(f)
-    f = click.option('--hyp', type=str, default='hyp/hyp.scratch.p5.yaml', help='hyperparameters path', show_default=True)(f)
+    f = click.option('--hyp', type=click.Choice(["scratch.p5", "scratch.p6", "finetune.dynamic.adam"]), default='scratch.p5', help='hyperparameters path', show_default=True)(f)
     f = click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)(f)
     f = click.option('--weight', type=str, help='initial weights path', required=True)(f)
     f = click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
