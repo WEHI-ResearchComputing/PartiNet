@@ -72,13 +72,12 @@ def train(hyp, opt, device, cfg, tb_writer=None):
     # Logging- Doing this before checking the dataset. Might update data_dict
     loggers = {'wandb': None}  # loggers dict
     if rank in [-1, 0]:
-        opt.hyp = hyp  # add hyperparameters
         run_id = torch.load(weight, map_location='cpu')['wandb_id'] if weight.endswith('.pt') and os.path.isfile(weight) else None
         wandb_logger = WandbLogger(opt, Path(opt.save_dir).stem, run_id, data_dict)
         loggers['wandb'] = wandb_logger.wandb
         data_dict = wandb_logger.data_dict
         if wandb_logger.wandb:
-            weight, epochs, hyp = opt.weight, opt.epochs, opt.hyp  # WandbLogger might update weights, epochs if resuming
+            weight, epochs, hyp = opt.weight, opt.epochs, hyp  # WandbLogger might update weights, epochs if resuming
 
     nc = 1 if opt.single_cls else int(data_dict['nc'])  # number of classes
     names = ['item'] if opt.single_cls and len(data_dict['names']) != 1 else data_dict['names']  # class names
@@ -470,6 +469,7 @@ def main(opt):
     # Resume
     wandb_run = check_wandb_resume(opt)
     cfg = os.path.join(partinet.DynamicDet.__path__[0], "cfg", f"dy-{opt.backbone_detector}-step2.yaml")
+    hyp = os.path.join(partinet.DynamicDet.__path__[0], "hyp", f"hyp.{opt.hyp}.yaml")
     if opt.resume and not wandb_run:  # resume an interrupted run
         ckpt = opt.resume if isinstance(opt.resume, str) else get_latest_run()  # specified or most recent path
         assert os.path.isfile(ckpt), 'ERROR: --resume checkpoint does not exist'
@@ -482,7 +482,7 @@ def main(opt):
         logger.info('Resuming training from %s' % ckpt)
     else:
         # opt.hyp = opt.hyp or ('hyp.finetune.yaml' if opt.weights else 'hyp.scratch.yaml')
-        opt.data, cfg, opt.hyp = check_file(opt.data), check_file(cfg), check_file(opt.hyp)  # check files
+        opt.data, cfg, hyp = check_file(opt.data), check_file(cfg), check_file(hyp)  # check files
         assert len(cfg), 'cfg must be specified'
         opt.img_size.extend([opt.img_size[-1]] * (2 - len(opt.img_size)))  # extend to 2 sizes (train, test)
         opt.save_dir = increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok)  # increment run
@@ -501,7 +501,7 @@ def main(opt):
         opt.batch_size = opt.total_batch_size // opt.world_size
 
     # Hyperparameters
-    with open(opt.hyp) as f:
+    with open(hyp) as f:
         hyp = yaml.load(f, Loader=yaml.SafeLoader)  # load hyps
 
     # Train
