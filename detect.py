@@ -1,6 +1,7 @@
 import argparse
 import time
 import logging
+import os
 from pathlib import Path
 
 import cv2
@@ -9,6 +10,7 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from numpy import random
 
+import partinet.DynamicDet
 from partinet.DynamicDet.models.yolo import Model
 from partinet.DynamicDet.utils.datasets import LoadStreams, LoadImages
 from partinet.DynamicDet.utils.general import check_img_size, check_imshow, non_max_suppression, \
@@ -20,7 +22,7 @@ from partinet.DynamicDet.utils.torch_utils import select_device, time_synchroniz
 logger = logging.getLogger(__name__)
 
 def detect(opt, save_img=False):
-    source, cfg, weight, view_img, save_txt, nc, imgsz = opt.source, opt.cfg, opt.weight, \
+    source, cfg, weight, view_img, save_txt, nc, imgsz = opt.source, os.path.join(partinet.DynamicDet.__path__[0], "cfg", f"dy-{opt.backbone_detector}-step2.yaml"), opt.weight, \
         opt.view_img, opt.save_txt, opt.num_classes, opt.img_size
     save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
