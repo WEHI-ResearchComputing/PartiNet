@@ -425,7 +425,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
                 pass
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, SPPCSPC]:
+        if m in [nn.Conv2d, Conv, ConvCheckpoint, DownC, RepConv, SPPCSPC]:
             c1, c2 = ch_b[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
@@ -481,7 +481,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
                 chs.append(ch_b2)
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, SPPCSPC]:
+        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, DownC, SPPCSPC]:
             if f == 'input':
                 c1, c2 = 3, args[0]
             else:
@@ -553,7 +553,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
                 chs.append(ch_h)
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, SPPCSPC]:
+        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, DownC, SPPCSPC]:
             assert len(chs) == 1
             c1, c2 = chs[0][f], args[0]
             if c2 != no:  # if not output
@@ -615,7 +615,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
                 chs.append(ch_h2)
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, SPPCSPC]:
+        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, DownC, SPPCSPC]:
             assert len(chs) == 1
             c1, c2 = chs[0][f], args[0]
             if c2 != no:  # if not output

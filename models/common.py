@@ -76,6 +76,20 @@ class ConvCheckpoint(nn.Module):
         x = checkpoint.checkpoint(self.conv, x)
         return x
 
+
+class DownC(nn.Module):
+    # Spatial pyramid pooling layer used in YOLOv3-SPP
+    def __init__(self, c1, c2, n=1, k=2):
+        super(DownC, self).__init__()
+        c_ = int(c1)  # hidden channels
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c_, c2//2, 3, k)
+        self.cv3 = Conv(c1, c2//2, 1, 1)
+        self.mp = nn.MaxPool2d(kernel_size=k, stride=k)
+
+    def forward(self, x):
+        return torch.cat((self.cv2(self.cv1(x)), self.cv3(self.mp(x))), dim=1)
+
 ##### end of basic #####
 
 
