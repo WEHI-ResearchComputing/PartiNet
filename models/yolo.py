@@ -416,6 +416,14 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
     no = na * (nc + 5)  # number of outputs = anchors * (classes + 5)
     layers_b, save_b, c2 = [], [], ch_b[-1]  # layers, savelist, ch_b out
 
+    def _parse_layer(i, f, m, n, args):
+        m_ = nn.Sequential(*[m(*args) for _ in range(n)]) if n > 1 else m(*args) # module
+        t = str(m)[8:-2].replace("__main__.", "") # module type
+        nparams = sum([x.numel() for x in m_.parameters()]) # number params
+        m_.i, m_.f, m_.type, m_.np = i, f, t, nparams  # attach index, 'from' index, type, number params
+        logger.info('%3s%18s%3s%10.0f  %-40s%-30s' % (i, f, n, nparams, t, args))  # print
+        return m_
+
     for i, (f, n, m, args) in enumerate(d['backbone']):  # from, number, module, args
         m = eval(m) if isinstance(m, str) else m  # eval strings
         for j, a in enumerate(args):
@@ -449,11 +457,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
         else:
             c2 = ch_b[f]
 
-        m_ = nn.Sequential(*[m(*args) for _ in range(n)]) if n > 1 else m(*args)  # module
-        t = str(m)[8:-2].replace('__main__.', '')  # module type
-        np = sum([x.numel() for x in m_.parameters()])  # number params
-        m_.i, m_.f, m_.type, m_.np = i, f, t, np  # attach index, 'from' index, type, number params
-        logger.info('%3s%18s%3s%10.0f  %-40s%-30s' % (i, f, n, np, t, args))  # print
+        m_ = _parse_layer(i, f, m, n, args)
         save_b.extend(x % i for x in ([f] if isinstance(f, (int, str)) else f) if x != -1)  # append to savelist
         layers_b.append(m_)
         if i == 0:
@@ -520,11 +524,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
             assert len(chs) == 1
             c2 = chs[0][f]
 
-        m_ = nn.Sequential(*[m(*args) for _ in range(n)]) if n > 1 else m(*args)  # module
-        t = str(m)[8:-2].replace('__main__.', '')  # module type
-        np = sum([x.numel() for x in m_.parameters()])  # number params
-        m_.i, m_.f, m_.type, m_.np = i, f, t, np  # attach index, 'from' index, type, number params
-        logger.info('%3s%18s%3s%10.0f  %-40s%-30s' % (i, f, n, np, t, args))  # print
+        m_ = _parse_layer(i, f, m, n, args)
         for x in ([f] if isinstance(f, (int, str)) else f):  # append to savelist
             if isinstance(x, str):
                 continue
@@ -582,11 +582,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
             assert len(chs) == 1
             c2 = chs[0][f]
 
-        m_ = nn.Sequential(*[m(*args) for _ in range(n)]) if n > 1 else m(*args)  # module
-        t = str(m)[8:-2].replace('__main__.', '')  # module type
-        np = sum([x.numel() for x in m_.parameters()])  # number params
-        m_.i, m_.f, m_.type, m_.np = i, f, t, np  # attach index, 'from' index, type, number params
-        logger.info('%3s%18s%3s%10.0f  %-40s%-30s' % (i, f, n, np, t, args))  # print
+        m_ = _parse_layer(i, f, m, n, args)
         for x in ([f] if isinstance(f, (int, str)) else f):  # append to savelist
             if isinstance(x, str):
                 continue
@@ -644,11 +640,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
             assert len(chs) == 1
             c2 = chs[0][f]
 
-        m_ = nn.Sequential(*[m(*args) for _ in range(n)]) if n > 1 else m(*args)  # module
-        t = str(m)[8:-2].replace('__main__.', '')  # module type
-        np = sum([x.numel() for x in m_.parameters()])  # number params
-        m_.i, m_.f, m_.type, m_.np = i, f, t, np  # attach index, 'from' index, type, number params
-        logger.info('%3s%18s%3s%10.0f  %-40s%-30s' % (i, f, n, np, t, args))  # print
+        m_ = _parse_layer(i, f, m, n, args)
         for x in ([f] if isinstance(f, (int, str)) else f):  # append to savelist
             if isinstance(x, str):
                 continue
