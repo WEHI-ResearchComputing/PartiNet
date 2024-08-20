@@ -102,7 +102,7 @@ def step2(**params):
     partinet.DynamicDet.train_step2.main(opt)
 
 @main.command()
-@click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
+@click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
 @click.option('--weight', type=str, help='model.pt path(s)', required=True)
 @click.option('--source', type=str, default='inference/images', help='source', show_default=True)  # file/folder, 0 for webcam
 @click.option('--num-classes', type=int, default=80, help='number of classes', show_default=True)
