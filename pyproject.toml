@@ -51,6 +51,9 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["partinet*"]
 
+[tool.setuptools.package-data]
+"*" = ["dy-*.yaml", "hyp.*.yaml"]
+
 [tool.setuptools.dynamic]
 version = {attr = "partinet.__version__"}
 
