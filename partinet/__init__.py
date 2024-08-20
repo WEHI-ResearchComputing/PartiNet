@@ -45,10 +45,10 @@ def train_common_args(f):
     f = click.option('--img-size', nargs=2, type=int, default=[640, 640], help='[train, test] image sizes', show_default=True)(f)
     f = click.option('--batch-size', type=int, default=16, help='total batch size for all GPUs', show_default=True)(f)
     f = click.option('--epochs', type=int, default=300, show_default=True)(f)
-    f = click.option('--hyp', type=str, default='hyp/hyp.scratch.p5.yaml', help='hyperparameters path', show_default=True)(f)
+    f = click.option('--hyp', type=click.Choice(["scratch.p5", "scratch.p6", "finetune.dynamic.adam"]), default='scratch.p5', help='hyperparameters path', show_default=True)(f)
     f = click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)(f)
     f = click.option('--weight', type=str, help='initial weights path', required=True)(f)
-    f = click.option('--cfg', type=str, help='model.yaml path', required=True)(f)
+    f = click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
 
     return f
 
@@ -102,7 +102,7 @@ def step2(**params):
     partinet.DynamicDet.train_step2.main(opt)
 
 @main.command()
-@click.option('--cfg', type=str, help='model.yaml path', required=True)
+@click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
 @click.option('--weight', type=str, help='model.pt path(s)', required=True)
 @click.option('--source', type=str, default='inference/images', help='source', show_default=True)  # file/folder, 0 for webcam
 @click.option('--num-classes', type=int, default=80, help='number of classes', show_default=True)
