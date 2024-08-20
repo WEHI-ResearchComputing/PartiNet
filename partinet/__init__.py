@@ -58,9 +58,24 @@ def main():
     pass
 
 @main.command()
-def preprocess():
-    click.echo("This will preprocess the micrographs.")
-    raise NotImplementedError("Not implemented yet!")
+@click.option("--labels", required=True, help="Path to the labels directory")
+@click.option("--images", required=True, help="Path to the images directory")
+@click.option("--output", required=True, help="Path to the output directory")
+def preprocess(labels, images, output):
+    click.echo("Preprocessing the micrographs...")
+    import partinet.split_train
+    partinet.split_train.main(labels, images, output)
+
+@main.command()
+@click.option("--labels", required=True, help="Path to the labels directory")
+@click.option("--images", required=True, help="Path to the images directory")
+@click.option("--output", required=True, help="Path to the output STAR file")
+@click.option("--conf", default=0.0, help="Minimum confidence threshold from predictions")
+def star(labels, images, output,conf):
+    click.echo("Generating STAR file...")
+    import partinet.star_file
+    partinet.star_file.main(labels,images,output,conf)
+
 
 @main.group()
 def train():
