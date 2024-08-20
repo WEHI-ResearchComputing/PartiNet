@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils.general import bbox_iou, box_iou, xywh2xyxy
-from utils.torch_utils import is_parallel
+from partinet.DynamicDet.utils.general import bbox_iou, box_iou, xywh2xyxy
+from partinet.DynamicDet.utils.torch_utils import is_parallel
 
 
 def smooth_BCE(eps=0.1):  # https://github.com/ultralytics/yolov3/issues/238#issuecomment-598028441
@@ -379,6 +379,7 @@ class ComputeLossOTA:
             fg_mask_inboxes = matching_matrix.sum(0) > 0.0
             matched_gt_inds = matching_matrix[:, fg_mask_inboxes].argmax(0)
 
+            fg_mask_inboxes = fg_mask_inboxes.to(from_which_layer.device)
             from_which_layer = from_which_layer[fg_mask_inboxes]
             all_b = all_b[fg_mask_inboxes]
             all_a = all_a[fg_mask_inboxes]
