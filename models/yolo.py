@@ -504,12 +504,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
         elif m is Concat:
             c2 = sum([ch[x] for x, ch in zip(f, chs)])
         elif m is Shortcut:
-            # grab channel from backbone if index is absolute.
-            # Otherwise grab channel from current (dual_backbone)
-            if f[0] > 0:
-                c2 = ch_b[f[0]]
-            else:
-                c2 = ch_b2[f[0]]
+            c2 = chs[0][f[0]]
         elif m is IDetect:
             args.append([ch[x] for x, ch in zip(f, chs)])
             if isinstance(args[1], int):  # number of anchors
@@ -573,12 +568,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
         elif m is Concat:
             c2 = sum([ch[x] for x, ch in zip(f, chs)])
         elif m is Shortcut:
-            # grab channel from backbone if index is absolute.
-            # Otherwise grab channel from current (head)
-            if f[0] > 0:
-                c2 = ch_b[f[0]]
-            else:
-                c2 = ch_h[f[0]]
+            c2 = chs[0][f[0]]
         elif m is IDetect:
             args.append([ch[x] for x, ch in zip(f, chs)])
             if isinstance(args[1], int):  # number of anchors
@@ -635,12 +625,7 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
         elif m is Concat:
             c2 = sum([ch[x] for x, ch in zip(f, chs)])
         elif m is Shortcut:
-            # grab channel from dual_backbone if index is absolute.
-            # Otherwise grab channel from current (head2)
-            if f[0] > 0:
-                c2 = ch_b2[f[0]]
-            else:
-                c2 = ch_h2[f[0]]
+            c2 = chs[0][f[0]]
         elif m is IDetect:
             args.append([ch[x] for x, ch in zip(f, chs)])
             if isinstance(args[1], int):  # number of anchors
