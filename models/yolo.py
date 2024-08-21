@@ -423,68 +423,30 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
         m_.i, m_.f, m_.type, m_.np = i, f, t, nparams  # attach index, 'from' index, type, number params
         logger.info('%3s%18s%3s%10.0f  %-40s%-30s' % (i, f, n, nparams, t, args))  # print
         return m_
-
-    for i, (f, n, m, args) in enumerate(d['backbone']):  # from, number, module, args
-        m = eval(m) if isinstance(m, str) else m  # eval strings
+    
+    parent_scope = locals()
+    def _eval_strings(m, args):
+        args_ = deepcopy(args)
         for j, a in enumerate(args):
             try:
-                args[j] = eval(a) if isinstance(a, str) else a  # eval strings
+                args_[j] = eval(a, {**locals(), **parent_scope}) if isinstance(a, str) else a  # eval strings
             except:
                 pass
-
-        n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [nn.Conv2d, Conv, ConvCheckpoint, DownC, RepConv, SPPCSPC]:
-            c1, c2 = ch_b[f], args[0]
-            if c2 != no:  # if not output
-                c2 = make_divisible(c2 * gw, 8)
-
-            args = [c1, c2, *args[1:]]
-            if m in [SPPCSPC]:
-                args.insert(2, n)  # number of repeats
-                n = 1
-        elif m is nn.BatchNorm2d:
-            args = [ch_b[f]]
-        elif m is Concat:
-            c2 = sum([ch_b[x] for x in f])
-        elif m is Shortcut:
-            c2 = ch_b[f[0]]
-        elif m is IDetect:
-            args.append([ch_b[x] for x in f])
-            if isinstance(args[1], int):  # number of anchors
-                args[1] = [list(range(args[1] * 2))] * len(f)
-        elif m is ReOrg:
-            c2 = ch_b[f] * 4
-        else:
-            c2 = ch_b[f]
-
-        m_ = _parse_layer(i, f, m, n, args)
-        save_b.extend(x % i for x in ([f] if isinstance(f, (int, str)) else f) if x != -1)  # append to savelist
-        layers_b.append(m_)
-        if i == 0:
-            ch_b = []
-        ch_b.append(c2)
-
-    layers_b2, save_b2 = [], []  # layers, savelist
-    ch_b2 = []
-
-    for i, (f, n, m, args) in enumerate(d['dual_backbone']):  # from, number, module, args
-        m = eval(m) if isinstance(m, str) else m  # eval strings
-        for j, a in enumerate(args):
-            try:
-                args[j] = eval(a) if isinstance(a, str) else a  # eval strings
-            except:
-                pass
-
+        return eval(m) if isinstance(m, str) else m, args_
+    
+    def _ch_from(f, prev_ch, this_ch):
         chs = []
         for x in ([f] if isinstance(f, (int, str)) else f):
             if isinstance(x, str):
                 continue
             if x >= 0:
-                chs.append(ch_b)
+                chs.append(prev_ch)
             else:
-                chs.append(ch_b2)
+                chs.append(this_ch)
+        return chs
 
-        n = max(round(n * gd), 1) if n > 1 else n  # depth gain
+    def _check_module_io(m, f, chs, args, n):
+        c1, c2 = None, None
         if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, DownC, SPPCSPC]:
             if f == 'input':
                 c1, c2 = 3, args[0]
@@ -522,130 +484,78 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
         else:
             assert len(chs) == 1
             c2 = chs[0][f]
+        
+        return c1, c2, args
+    
+    def _extend_layers(m_, f, prev_save, this_save, this_layers):
 
-        m_ = _parse_layer(i, f, m, n, args)
         for x in ([f] if isinstance(f, (int, str)) else f):  # append to savelist
             if isinstance(x, str):
                 continue
             if x >= 0:
-                save_b.extend([x])
+                prev_save.extend([x])
             elif x != -1:
-                save_b2.extend([x % i])
-        layers_b2.append(m_)
+                this_save.extend([x % i])
+        this_layers.append(m_)
+
+        return prev_save, this_save, this_layers
+
+    # build backbone network
+    for i, (f, n, m, args_) in enumerate(d['backbone']):  # from, number, module, args
+        m, args = _eval_strings(m, args_)
+
+        n = max(round(n * gd), 1) if n > 1 else n  # depth gain
+        if isinstance(f, int):
+            _, c2, args = _check_module_io(m, f, [ch_b], args, n)
+        else:
+            _, c2, args = _check_module_io(m, f, [ch_b]*len(f), args, n)
+            
+        m_ = _parse_layer(i, f, m, n, args)
+        save_b.extend(x % i for x in ([f] if isinstance(f, (int, str)) else f) if x != -1)  # append to savelist
+        layers_b.append(m_)
+        if i == 0:
+            ch_b = []
+        ch_b.append(c2)
+
+    # build dual_backbone network
+    layers_b2, save_b2 = [], []  # layers, savelist
+    ch_b2 = []
+    for i, (f, n, m, args_) in enumerate(d['dual_backbone']):  # from, number, module, args
+        m, args = _eval_strings(m, args_)
+
+        chs = _ch_from(f, ch_b, ch_b2)
+
+        n = max(round(n * gd), 1) if n > 1 else n  # depth gain
+        _, c2, args = _check_module_io(m, f, chs, args, n)
+
+        m_ = _parse_layer(i, f, m, n, args)
+        save_b, save_b2, layers_b2 = _extend_layers(m_, f, save_b, save_b2, layers_b2)
         ch_b2.append(c2)
 
+    # build head network
     layers_h, save_h, ch_h = [], [], []
-    for i, (f, n, m, args) in enumerate(d['head']):  # from, number, module, args
-        m = eval(m) if isinstance(m, str) else m  # eval strings
-        for j, a in enumerate(args):
-            try:
-                args[j] = eval(a) if isinstance(a, str) else a  # eval strings
-            except:
-                pass
-        chs = []
-        for x in ([f] if isinstance(f, (int, str)) else f):
-            if isinstance(x, str):
-                continue
-            if x >= 0:
-                chs.append(ch_b)
-            else:
-                chs.append(ch_h)
+    for i, (f, n, m, args_) in enumerate(d['head']):  # from, number, module, args
+        m, args = _eval_strings(m, args_)
+        chs = _ch_from(f, ch_b, ch_h)
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, DownC, SPPCSPC]:
-            assert len(chs) == 1
-            c1, c2 = chs[0][f], args[0]
-            if c2 != no:  # if not output
-                c2 = make_divisible(c2 * gw, 8)
-
-            args = [c1, c2, *args[1:]]
-            if m in [SPPCSPC]:
-                args.insert(2, n)  # number of repeats
-                n = 1
-        elif m is nn.BatchNorm2d:
-            assert len(chs) == 1
-            args = [chs[0][f]]
-        elif m is Concat:
-            c2 = sum([ch[x] for x, ch in zip(f, chs)])
-        elif m is Shortcut:
-            c2 = chs[0][f[0]]
-        elif m is IDetect:
-            args.append([ch[x] for x, ch in zip(f, chs)])
-            if isinstance(args[1], int):  # number of anchors
-                args[1] = [list(range(args[1] * 2))] * len(f)
-        elif m is ReOrg:
-            assert len(chs) == 1
-            c2 = chs[0][f] * 4
-        else:
-            assert len(chs) == 1
-            c2 = chs[0][f]
+        _, c2, args = _check_module_io(m, f, chs, args, n)
 
         m_ = _parse_layer(i, f, m, n, args)
-        for x in ([f] if isinstance(f, (int, str)) else f):  # append to savelist
-            if isinstance(x, str):
-                continue
-            if x >= 0:
-                save_b.extend([x])
-            elif x != -1:
-                save_h.extend([x % i])
-        layers_h.append(m_)
+        save_b, save_h, layers_h = _extend_layers(m_, f, save_b, save_h, layers_h)
         ch_h.append(c2)
 
+    # build head2 network
     layers_h2, save_h2, ch_h2 = [], [], []
-    for i, (f, n, m, args) in enumerate(d['head2']):  # from, number, module, args
-        m = eval(m) if isinstance(m, str) else m  # eval strings
-        for j, a in enumerate(args):
-            try:
-                args[j] = eval(a) if isinstance(a, str) else a  # eval strings
-            except:
-                pass
-        chs = []
-        for x in ([f] if isinstance(f, (int, str)) else f):
-            if isinstance(x, str):
-                continue
-            if x >= 0:
-                chs.append(ch_b2)
-            else:
-                chs.append(ch_h2)
+    for i, (f, n, m, args_) in enumerate(d['head2']):  # from, number, module, args
+        m, args = _eval_strings(m, args_)
+        chs = _ch_from(f, ch_b2, ch_h2)
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [nn.Conv2d, Conv, ConvCheckpoint, RepConv, DownC, SPPCSPC]:
-            assert len(chs) == 1
-            c1, c2 = chs[0][f], args[0]
-            if c2 != no:  # if not output
-                c2 = make_divisible(c2 * gw, 8)
-
-            args = [c1, c2, *args[1:]]
-            if m in [SPPCSPC]:
-                args.insert(2, n)  # number of repeats
-                n = 1
-        elif m is nn.BatchNorm2d:
-            assert len(chs) == 1
-            args = [chs[0][f]]
-        elif m is Concat:
-            c2 = sum([ch[x] for x, ch in zip(f, chs)])
-        elif m is Shortcut:
-            c2 = chs[0][f[0]]
-        elif m is IDetect:
-            args.append([ch[x] for x, ch in zip(f, chs)])
-            if isinstance(args[1], int):  # number of anchors
-                args[1] = [list(range(args[1] * 2))] * len(f)
-        elif m is ReOrg:
-            assert len(chs) == 1
-            c2 = chs[0][f] * 4
-        else:
-            assert len(chs) == 1
-            c2 = chs[0][f]
+        _, c2, args = _check_module_io(m, f, chs, args, n)
 
         m_ = _parse_layer(i, f, m, n, args)
-        for x in ([f] if isinstance(f, (int, str)) else f):  # append to savelist
-            if isinstance(x, str):
-                continue
-            if x >= 0:
-                save_b.extend([x])
-            elif x != -1:
-                save_h2.extend([x % i])
-        layers_h2.append(m_)
+        save_b2, save_h2, layers_h2 = _extend_layers(m_, f, save_b2, save_h2, layers_h2)
         ch_h2.append(c2)
 
     save_b.extend(d['b1_save'])
