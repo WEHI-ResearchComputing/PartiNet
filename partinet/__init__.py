@@ -48,7 +48,7 @@ def train_common_args(f):
     f = click.option('--hyp', type=click.Choice(["scratch.p5", "scratch.p6", "finetune.dynamic.adam"]), default='scratch.p5', help='hyperparameters path', show_default=True)(f)
     f = click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)(f)
     f = click.option('--weight', type=str, help='initial weights path', required=True)(f)
-    f = click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
+    f = click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
 
     return f
 
