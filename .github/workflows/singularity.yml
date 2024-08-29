@@ -31,7 +31,7 @@ jobs:
       matrix:
         changed_file: ${{ fromJson(needs.changes.outputs.changed_file) }}
         singularity_version:
-          - '4.1.0'
+          - '3.8.1'
 
     container:
       image: quay.io/singularity/singularity:v${{ matrix.singularity_version }}
