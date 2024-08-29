@@ -2,8 +2,7 @@ bootstrap: docker
 from: python:3.9.19-slim-bookworm
 
 %files
-  pyproject.toml /opt/PartiNet/pyproject.toml
-  partinet /opt/PartiNet/partinet
+  . /opt/PartiNet
 
 %post
   python -m pip install --no-cache-dir /opt/PartiNet
