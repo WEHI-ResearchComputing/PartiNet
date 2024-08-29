@@ -6,7 +6,7 @@ from: python:3.9.19-slim-bookworm
   partinet /opt/PartiNet/partinet
 
 %post
-  python -m pip install --no-cache /opt/PartiNet
+  python -m pip install --no-cache-dir /opt/PartiNet
 
 %labels
   AUTHORS Mihin Perera, Edward Yang, Julie Iskander
