@@ -29,30 +29,21 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build Container
-        if: ${{ env.keepgoing == 'true' }}
-        env:
-          recipe: ${{ matrix.changed_file }}
         run: |
-         ls 
-         if [ -f "${{ matrix.changed_file }}" ]; then
-            sudo -E singularity build container.sif ${{ matrix.changed_file }}
-            tag=$(echo "${recipe/Singularity\./}")
-            if [ "$tag" == "Singularity" ]; then
-                tag=latest
-            fi
+         if [ -f Singularity ]; then
+            sudo -E singularity build container.sif Singularity
+            tag=tag
             # Build the container and name by tag
             echo "Tag is $tag."
             echo "tag=$tag" >> $GITHUB_ENV
          else
-           echo "${{ matrix.changed_file }} is not found."
+           echo "Singularity is not found."
            echo "Present working directory: $PWD"
            ls
          fi
 
       - name: Login and Deploy Container
         if: (github.event_name != 'pull_request')
-        env:
-          keepgoing: ${{ env.keepgoing }}
         run: |         
             if [[ "${keepgoing}" == "true" ]]; then
                 echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
