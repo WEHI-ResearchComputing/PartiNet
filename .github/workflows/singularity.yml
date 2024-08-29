@@ -10,26 +10,12 @@ on:
   pull_request: []
 
 jobs:
-  changes:
-    name: "Changed Singularity Recipes"
-    runs-on: ubuntu-latest
-    outputs:
-      changed_file: ${{ steps.files.outputs.added_modified }}
-    steps:
-      - id: files
-        uses: jitterbit/get-changed-files@b17fbb00bdc0c0f63fcf166580804b4d2cdc2a42
-        with:
-          format: 'json'
-  
   build-test-containers:
-    needs:
-      - changes
     runs-on: ubuntu-latest
     strategy:
       # Keep going on other deployments if anything bloops
       fail-fast: false
       matrix:
-        changed_file: ${{ fromJson(needs.changes.outputs.changed_file) }}
         singularity_version:
           - '3.8.1'
 
@@ -37,18 +23,10 @@ jobs:
       image: quay.io/singularity/singularity:v${{ matrix.singularity_version }}
       options: --privileged
 
-    name: Check ${{ matrix.changed_file }}
     steps:
 
       - name: Check out code for the container builds
         uses: actions/checkout@v2
-
-      - name: Continue if Singularity Recipe
-        run: |
-          # Continue if we have a changed Singularity recipe
-          if [[ "${{ matrix.changed_file }}" = *Singularity* ]]; then
-            echo "keepgoing=true" >> $GITHUB_ENV
-          fi          
 
       - name: Build Container
         if: ${{ env.keepgoing == 'true' }}
@@ -78,5 +56,6 @@ jobs:
         run: |         
             if [[ "${keepgoing}" == "true" ]]; then
                 echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
-                singularity push container.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${tag}
+                container_name=$(echo ${GITHUB_REPOSITORY} | tr '[:upper:]' '[:lower:]')
+                singularity push container.sif oras://ghcr.io/${container_name}:${tag}
             fi
