@@ -1,10 +1,9 @@
-name: Singularity Build (docker)
+name: Singularity Build
 on: 
   push:
 
     # Edit the branches here if you want to change deploy behavior
     branches:
-      - container
       - main
 
   # Do the builds on all pull requests (to test them)
