@@ -264,3 +264,19 @@ Options:
 ```
 
 TODO: more details...
+
+## Get the container
+
+Replace `partinet <subcommand> <args>` with one of the below:
+
+### Docker
+
+```bash
+docker run ghcr.io/wehi-researchcomputing/partinet:latest <subcommand> <args>
+```
+
+### Singularity/Apptainer
+
+```bash
+singularity run oras://ghcr.io/wehi-researchcomputing/partinet:latest <subcommand> <args>
+```
