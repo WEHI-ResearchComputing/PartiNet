@@ -5,11 +5,13 @@ from pathlib import Path
 from threading import Thread
 import yaml
 from tqdm import tqdm
+import os
 
 import numpy as np
 import torch
 import torch.nn as nn
 
+import partinet.DynamicDet
 from partinet.DynamicDet.models.yolo import Model
 from partinet.DynamicDet.utils.datasets import create_dataloader
 from partinet.DynamicDet.utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size, \
@@ -31,8 +33,10 @@ def test(opt,
          half_precision=True,
          is_coco=False):
     
-    data, cfg, weight, batch_size, imgsz, conf_thres, iou_thres, save_json, single_cls, augment, verbose, save_hybrid, save_conf, v5_metric, dy_thres, save_results \
-        = opt.data, opt.cfg, opt.weight, opt.batch_size, opt.img_size, opt.conf_thres, opt.iou_thres, opt.save_json, opt.single_cls, opt.augment, opt.verbose, opt.save_hybrid, opt.save_conf, opt.v5_metric, opt.dy_thres, opt.save_results
+    data, weight, batch_size, imgsz, conf_thres, iou_thres, save_json, single_cls, augment, verbose, save_hybrid, save_conf, v5_metric, dy_thres, save_results \
+        = opt.data, opt.weight, opt.batch_size, opt.img_size, opt.conf_thres, opt.iou_thres, opt.save_json, opt.single_cls, opt.augment, opt.verbose, opt.save_hybrid, opt.save_conf, opt.v5_metric, opt.dy_thres, opt.save_results
+
+    cfg = os.path.join(partinet.DynamicDet.__path__[0], "cfg", f"dy-{opt.backbone_detector}-step2.yaml")
     
     # preprocess args
     save_txt = opt.save_txt | opt.save_hybrid # for auto-labelling
@@ -306,37 +310,3 @@ def test(opt,
     for i, c in enumerate(ap_class):
         maps[c] = ap[i]
     return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(prog='test.py')
-    parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
-    parser.add_argument('--weight', type=str, default='', help='model.pt path(s)')
-    parser.add_argument('--data', type=str, default='data/coco.yaml', help='*.data path')
-    parser.add_argument('--batch-size', type=int, default=1, help='size of each image batch')
-    parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
-    parser.add_argument('--conf-thres', type=float, default=0.001, help='object confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.65, help='IOU threshold for NMS')
-    parser.add_argument('--task', default='val', help='train, val, test, speed or study')
-    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--single-cls', action='store_true', help='treat as single-class dataset')
-    parser.add_argument('--augment', action='store_true', help='augmented inference')
-    parser.add_argument('--verbose', action='store_true', help='report mAP by class')
-    parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
-    parser.add_argument('--save-hybrid', action='store_true', help='save label+prediction hybrid results to *.txt')
-    parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
-    parser.add_argument('--save-json', action='store_true', help='save a cocoapi-compatible JSON results file')
-    parser.add_argument('--project', default='runs/test', help='save to project/name')
-    parser.add_argument('--name', default='exp', help='save to project/name')
-    parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
-    parser.add_argument('--v5-metric', action='store_true', help='assume maximum recall as 1.0 in AP calculation')
-    parser.add_argument('--dy-thres', type=float, default=0.5, help='dynamic threshold')
-    parser.add_argument('--save-results', action='store_true', help='save results')
-    opt = parser.parse_args()
-    print(opt)
-
-    if opt.task in ('train', 'val', 'test'):  # run normally
-        test(opt)
-
-    else:
-        raise NotImplementedError
