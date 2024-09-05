@@ -21,31 +21,24 @@ from partinet.DynamicDet.utils.torch_utils import select_device, time_synchroniz
 
 logger = logging.getLogger(__name__)
 
-def test(data,
-         cfg=None,
-         weight=None,
-         batch_size=32,
-         imgsz=640,
-         conf_thres=0.001,
-         iou_thres=0.6,  # for NMS
-         save_json=False,
-         single_cls=False,
-         augment=False,
-         verbose=False,
+def test(opt,
          model=None,
          dataloader=None,
          save_dir=Path(''),  # for saving images
-         save_txt=False,  # for auto-labelling
-         save_hybrid=False,  # for hybrid auto-labelling
-         save_conf=False,  # save auto-label confidences
          plots=True,
          wandb_logger=None,
          compute_loss=None,
          half_precision=True,
-         is_coco=False,
-         v5_metric=False,
-         dy_thres=0.5,
-         save_results=False):
+         is_coco=False):
+    
+    data, cfg, weight, batch_size, imgsz, conf_thres, iou_thres, save_json, single_cls, augment, verbose, save_hybrid, save_conf, v5_metric, dy_thres, save_results \
+        = opt.data, opt.cfg, opt.weight, opt.batch_size, opt.img_size, opt.conf_thres, opt.iou_thres, opt.save_json, opt.single_cls, opt.augment, opt.verbose, opt.save_hybrid, opt.save_conf, opt.v5_metric, opt.dy_thres, opt.save_results
+    
+    # preprocess args
+    save_txt = opt.save_txt | opt.save_hybrid # for auto-labelling
+    save_json |= data.endswith('coco.yaml')
+    data = check_file(data)  # check file
+
     # Initialize/load model and set device
     training = model is not None
 
@@ -340,29 +333,10 @@ if __name__ == '__main__':
     parser.add_argument('--dy-thres', type=float, default=0.5, help='dynamic threshold')
     parser.add_argument('--save-results', action='store_true', help='save results')
     opt = parser.parse_args()
-    opt.save_json |= opt.data.endswith('coco.yaml')
-    opt.data = check_file(opt.data)  # check file
     print(opt)
 
     if opt.task in ('train', 'val', 'test'):  # run normally
-        test(opt.data,
-             opt.cfg,
-             opt.weight,
-             opt.batch_size,
-             opt.img_size,
-             opt.conf_thres,
-             opt.iou_thres,
-             opt.save_json,
-             opt.single_cls,
-             opt.augment,
-             opt.verbose,
-             save_txt=opt.save_txt | opt.save_hybrid,
-             save_hybrid=opt.save_hybrid,
-             save_conf=opt.save_conf,
-             v5_metric=opt.v5_metric,
-             dy_thres=opt.dy_thres,
-             save_results=opt.save_results
-             )
+        test(opt)
 
     else:
         raise NotImplementedError
