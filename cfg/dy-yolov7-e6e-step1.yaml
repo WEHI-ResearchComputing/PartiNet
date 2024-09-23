@@ -135,7 +135,7 @@ backbone:
 
 n_first_layers: 112
 
-b1_save: [0, 1, 23, 45, 67, 89, 111]
+b1_save: [0, 23, 45, 67, 89, 111]
 b2_save: [51, 74, 97, 120]
 
 # keep_input: True
