@@ -1,7 +1,9 @@
 import click
 import sys
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
+
+DYNAMICDET_AVAILABLE_MODELS = ["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6", "yolov6-e6e"]
 
 def print_params(params: dict) -> None:
     """
@@ -48,7 +50,7 @@ def train_common_args(f):
     f = click.option('--hyp', type=click.Choice(["scratch.p5", "scratch.p6", "finetune.dynamic.adam"]), default='scratch.p5', help='hyperparameters path', show_default=True)(f)
     f = click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)(f)
     f = click.option('--weight', type=str, help='initial weights path', required=True)(f)
-    f = click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
+    f = click.option('--backbone-detector', type=click.Choice(DYNAMICDET_AVAILABLE_MODELS, case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
 
     return f
 
@@ -102,7 +104,7 @@ def step2(**params):
     partinet.DynamicDet.train_step2.main(opt)
 
 @main.command()
-@click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
+@click.option('--backbone-detector', type=click.Choice(DYNAMICDET_AVAILABLE_MODELS, case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
 @click.option('--weight', type=str, help='model.pt path(s)', required=True)
 @click.option('--source', type=str, default='inference/images', help='source', show_default=True)  # file/folder, 0 for webcam
 @click.option('--num-classes', type=int, default=80, help='number of classes', show_default=True)
