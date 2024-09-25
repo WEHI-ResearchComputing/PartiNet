@@ -23,26 +23,32 @@ from partinet.DynamicDet.utils.torch_utils import select_device, time_synchroniz
 
 logger = logging.getLogger(__name__)
 
-def test(opt,
+def test(data,
+         cfg=None,
+         weight=None,
+         batch_size=32,
+         imgsz=640,
+         conf_thres=0.001,
+         iou_thres=0.6,  # for NMS
+         save_json=False,
+         single_cls=False,
+         augment=False,
+         verbose=False,
          model=None,
          dataloader=None,
          save_dir=Path(''),  # for saving images
+         save_txt=False,  # for auto-labelling
+         save_hybrid=False,  # for hybrid auto-labelling
+         save_conf=False,  # save auto-label confidences
          plots=True,
          wandb_logger=None,
          compute_loss=None,
          half_precision=True,
-         is_coco=False):
-    
-    data, weight, batch_size, imgsz, conf_thres, iou_thres, save_json, single_cls, augment, verbose, save_hybrid, save_conf, v5_metric, dy_thres, save_results \
-        = opt.data, opt.weight, opt.batch_size, opt.img_size, opt.conf_thres, opt.iou_thres, opt.save_json, opt.single_cls, opt.augment, opt.verbose, opt.save_hybrid, opt.save_conf, opt.v5_metric, opt.dy_thres, opt.save_results
-
-    cfg = os.path.join(partinet.DynamicDet.__path__[0], "cfg", f"dy-{opt.backbone_detector}-step2.yaml")
-    
-    # preprocess args
-    save_txt = opt.save_txt | opt.save_hybrid # for auto-labelling
-    save_json |= data.endswith('coco.yaml')
-    data = check_file(data)  # check file
-
+         is_coco=False,
+         v5_metric=False,
+         dy_thres=0.5,
+         save_results=False,
+         opt=argparse.Namespace()):
     # Initialize/load model and set device
     training = model is not None
 
@@ -310,3 +316,29 @@ def test(opt,
     for i, c in enumerate(ap_class):
         maps[c] = ap[i]
     return (mp, mr, map50, map, *(loss.cpu() / len(dataloader)).tolist()), maps, t
+
+
+def main(opt):
+
+    opt.save_json |= opt.data.endswith('coco.yaml')
+    opt.data = check_file(opt.data)
+
+    test(data=opt.data,
+         cfg=os.path.join(partinet.DynamicDet.__path__[0], "cfg", f"dy-{opt.backbone_detector}-step2.yaml"),
+         weight=opt.weight,
+         batch_size=opt.batch_size,
+         imgsz=opt.img_size,
+         conf_thres=opt.conf_thres,
+         iou_thres=opt.iou_thres,
+         save_json=opt.save_json,
+         single_cls=opt.single_cls,
+         augment=opt.augment,
+         verbose=opt.verbose,
+         save_txt=opt.save_txt | opt.save_hybrid,
+         save_hybrid=opt.save_hybrid,
+         save_conf=opt.save_conf,
+         v5_metric=opt.v5_metric,
+         dy_thres=opt.dy_thres,
+         save_results=opt.save_results,
+         opt=opt
+    )

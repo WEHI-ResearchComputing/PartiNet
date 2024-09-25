@@ -426,7 +426,8 @@ def train(hyp, opt, device, cfg, tb_writer=None):
                                                  wandb_logger=wandb_logger,
                                                  compute_loss=compute_loss,
                                                  is_coco=is_coco,
-                                                 v5_metric=opt.v5_metric)
+                                                 v5_metric=opt.v5_metric,
+                                                 opt=opt)
 
             # Write
             with open(results_file, 'a') as f:
