@@ -169,33 +169,10 @@ def test(**params):
 
     import argparse
     opt = argparse.Namespace(**params)
-    opt.save_json |= opt.data.endswith('coco.yaml')
-
-    # check data file
-    from partinet.DynamicDet.utils.general import check_file
-    opt.data = check_file(opt.data)
 
     import partinet.DynamicDet.test
     with partinet.DynamicDet.test.torch.no_grad():
-        partinet.DynamicDet.test.test(
-            data=opt.data,
-            cfg=os.path.join(partinet.DynamicDet.__path__[0], "cfg", f"dy-{opt.backbone_detector}-step2.yaml"),
-            weight=opt.weight,
-            batch_size=opt.batch_size,
-            imgsz=opt.img_size,
-            conf_thres=opt.conf_thres,
-            iou_thres=opt.iou_thres,
-            save_json=opt.save_json,
-            single_cls=opt.single_cls,
-            augment=opt.augment,
-            verbose=opt.verbose,
-            save_txt=opt.save_txt | opt.save_hybrid,
-            save_hybrid=opt.save_hybrid,
-            save_conf=opt.save_conf,
-            v5_metric=opt.v5_metric,
-            dy_thres=opt.dy_thres,
-            save_results=opt.save_results
-        )
+        partinet.DynamicDet.test.main(opt)
 
 if __name__ == "__main__":
     main()
