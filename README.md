@@ -47,6 +47,7 @@ Options:
 Commands:
   detect
   preprocess
+  test
   train
 ```
 
@@ -260,6 +261,49 @@ Options:
   --name TEXT                     save results to project/name  [default: exp]
   --exist-ok                      existing project/name ok, do not increment
   --dy-thres FLOAT                dynamic thres  [default: 0.5]
+  --help                          Show this message and exit.
+```
+
+TODO: more details...
+
+## Testing
+
+```bash
+partinet test --help
+```
+```
+Usage: partinet test [OPTIONS]
+
+Options:
+  --backbone-detector [yolov7|yolov7-w6|yolov7x]
+                                  The choice of backbone to be used.
+                                  [default: yolov7]
+  --weight TEXT                   model.pt path(s)  [required]
+  --data TEXT                     data.yaml path  [default: data/coco.yaml]
+  --batch-size INTEGER            total batch size for all GPUs  [default: 1]
+  --img-size INTEGER              validation image size (pixels)  [default:
+                                  640]
+  --conf-thres FLOAT              object confidence threshold  [default:
+                                  0.001]
+  --iou-thres FLOAT               IOU threshold for NMS  [default: 0.65]
+  --task [train|val|test]         train, val, test, speed or study  [default:
+                                  test]
+  --device TEXT                   cuda device, i.e. 0 or 0,1,2,3 or cpu
+  --single-cls                    train multi-class data as single-class
+  --augment                       augmented inference
+  --verbose                       report mAP by class
+  --save-txt                      save results to *.txt
+  --save-hybrid                   save label+prediction hybrid results to
+                                  *.txt
+  --save-conf                     save confidences in --save-txt labels
+  --save-json                     save a cocoapi-compatible JSON results file
+  --project TEXT                  save to project/name  [default: runs/test]
+  --name TEXT                     save to project/name  [default: exp]
+  --exist-ok                      existing project/name ok, do not increment
+  --v5-metric                     assume maximum recall as 1.0 in AP
+                                  calculation
+  --dy-thres FLOAT                dynamic thres  [default: 0.5]
+  --save-results                  save results
   --help                          Show this message and exit.
 ```
 
