@@ -1,4 +1,0 @@
-[submodule "DynamicDet"]
-	path = partinet/DynamicDet
-	url = git@github.com:WEHI-ResearchComputing/DynamicDet.git
-	branch = partinet-submodule
