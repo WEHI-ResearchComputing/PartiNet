@@ -7,7 +7,7 @@ from: python:3.9.19-slim-bookworm
 %post
   # install system dependencies
   apt-get update
-  apt-get install libglib2.0-0 -y
+  apt-get install libglib2.0-0 libxext6 libx11-6 -y
 
   # cleanup apt package index
   rm -rf /var/cache/apt/archives /var/lib/apt/lists/*
