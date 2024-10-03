@@ -27,6 +27,8 @@ jobs:
 
       - name: Check out code for the container builds
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Build Container
         run: |
