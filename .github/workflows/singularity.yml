@@ -43,7 +43,7 @@ jobs:
       - name: Set Tag Based on Branch Name
         run: |
           # Get the branch name and set it as the tag
-          tag=${GITHUB_REF##*/}
+          tag=${GITHUB_REF##*/}-singularity
           echo "Tag is $tag."
           echo "tag=$tag" >> $GITHUB_ENV
 
