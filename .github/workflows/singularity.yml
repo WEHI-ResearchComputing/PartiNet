@@ -49,9 +49,7 @@ jobs:
 
       - name: Login and Deploy Container
         if: (github.event_name != 'pull_request')
-        run: |         
-            if [[ "${keepgoing}" == "true" ]]; then
-                echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
-                container_name=$(echo ${GITHUB_REPOSITORY} | tr '[:upper:]' '[:lower:]')
-                singularity push container.sif oras://ghcr.io/${container_name}:${tag}
-            fi
+        run: |
+            echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
+            container_name=$(echo ${GITHUB_REPOSITORY} | tr '[:upper:]' '[:lower:]')
+            singularity push container.sif oras://ghcr.io/${container_name}:${tag}
