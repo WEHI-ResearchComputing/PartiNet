@@ -3,7 +3,7 @@ import sys, os
 
 __version__ = "0.1.1"
 
-DYNAMICDET_AVAILABLE_MODELS = ["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6", "yolov7-e6e"]
+DYNAMICDET_AVAILABLE_MODELS = ["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6", "yolov7-e6e", "yolov10m"]
 
 def print_params(params: dict) -> None:
     """

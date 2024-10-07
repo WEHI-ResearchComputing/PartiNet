@@ -411,12 +411,25 @@ class Model(nn.Module):
 
 def parse_model(d, ch_b):  # model_dict, input_channels(3)
     logger.info('\n%3s%18s%3s%10s  %-40s%-30s' % ('', 'from', 'n', 'params', 'module', 'arguments'))
-    anchors, nc, gd, gw = d['anchors'], d['nc'], d['depth_multiple'], d['width_multiple']
-    na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors
-    no = na * (nc + 5)  # number of outputs = anchors * (classes + 5)
+
+    # grab model args from yaml and assign defaults if they don't exist
+    anchors, nc, scales = (d.get(x) for x in ("anchors", "nc", "scales"))
+    gd, gw, kpt_shape = (d.get(x, 1.0) for x in ("depth_multiple", "width_multiple", "kpt_shape"))
+    max_channels = float("inf")
+    # overwrite depth/width multiplier if scales is provided
+    if scales:
+        scale = tuple(scales.keys())[0]
+        gd, gw, max_channels = scales[scale]
+
+    na = (len(anchors[0]) // 2) if isinstance(anchors, list) else anchors  # number of anchors (yolov7* models only)
+    no = na *(nc+5) if na else nc # number of outputs = anchors * (classes + 5)
+    
     layers_b, save_b, c2 = [], [], ch_b[-1]  # layers, savelist, ch_b out
 
     def _parse_layer(i, f, m, n, args):
+        """
+        Helper function to parse PyTorch Neural Network modules from a yaml
+        """
         m_ = nn.Sequential(*[m(*args) for _ in range(n)]) if n > 1 else m(*args) # module
         t = str(m)[8:-2].replace("__main__.", "") # module type
         nparams = sum([x.numel() for x in m_.parameters()]) # number params
@@ -433,13 +446,13 @@ def parse_model(d, ch_b):  # model_dict, input_channels(3)
                 pass
 
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
-        if m in [nn.Conv2d, Conv, ConvCheckpoint, DownC, RepConv, SPPCSPC]:
+        if m in [nn.Conv2d, Conv, ConvCheckpoint, DownC, RepConv, SPPCSPC, C2f, C2fCIB, SPPF, SCDown, PSA]:
             c1, c2 = ch_b[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
 
             args = [c1, c2, *args[1:]]
-            if m in [SPPCSPC]:
+            if m in [SPPCSPC, C2f, C2fCIB]:
                 args.insert(2, n)  # number of repeats
                 n = 1
         elif m is nn.BatchNorm2d:
