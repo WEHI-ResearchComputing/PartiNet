@@ -82,7 +82,7 @@ def write_file_paths_to_file(filename:str, dirname:str, mode:str):
             for file in files:
                 f.write(os.path.join(root, file) + '\n')
 
-def prep_datasplit(images_dir:str, annot_dir:str, set:int,notused:bool):
+def prep_datasplit(images_dir:str, annot_dir:str, set:int):
     datasplit_path=os.path.join(FLAGS.datasets_path,"data_split")
     coords = os.listdir(annot_dir)
     train=0
@@ -90,33 +90,25 @@ def prep_datasplit(images_dir:str, annot_dir:str, set:int,notused:bool):
     test=0
 
     if set==2: # test set
-        if notused:
-            o_image_path=os.path.join(datasplit_path,"images","test_left")
-            o_label_path=os.path.join(datasplit_path,"labels","test_left")
-        else :
-            o_image_path=os.path.join(datasplit_path,"images","test")
-            o_label_path=os.path.join(datasplit_path,"labels","test")            
+        o_image_path=os.path.join(datasplit_path,"images","test")
+        o_label_path=os.path.join(datasplit_path,"labels","test")            
         for idx, file in enumerate(coords):
             file_name = file[:-4]
             # copying test images/labels
             shutil.copy(os.path.join(images_dir, file_name+".jpg"), os.path.join(o_image_path, file_name+".jpg"))
             shutil.copy(os.path.join(annot_dir, file_name+".txt"), os.path.join(o_label_path, file_name+".txt"))
             
-        # creating test.txt file
-        if notused:
-            write_file_paths_to_file(os.path.join(datasplit_path, "test_all.txt"),o_image_path,"a")
-        else:
-            write_file_paths_to_file(os.path.join(datasplit_path, "test_all.txt"),o_image_path,"a")
-            write_file_paths_to_file(os.path.join(datasplit_path, "test.txt"),o_image_path,"a")
+        # creating test.txt file 
+        write_file_paths_to_file(os.path.join(datasplit_path, "test.txt"),o_image_path,"w")
         test=len(coords)
+
     elif set == 1: #development set
         # splitting data into training and val
         train_idx, val_idx = tts(np.arange(0, len(coords), 1), shuffle=True)
         train=len(train_idx)
         val=len(val_idx)
-        suffix=""
-        if notused:
-            suffix="_left"
+
+        
         o_image_path=os.path.join(datasplit_path,"images")
         o_label_path=os.path.join(datasplit_path,"labels")
                 
@@ -124,28 +116,21 @@ def prep_datasplit(images_dir:str, annot_dir:str, set:int,notused:bool):
             file_name = file[:-4]
             if idx in train_idx:
                 # copying train images
-                shutil.copy(os.path.join(images_dir, file_name+".jpg"), os.path.join(o_image_path, f"train{suffix}", file_name+".jpg"))
+                shutil.copy(os.path.join(images_dir, file_name+".jpg"), os.path.join(o_image_path, f"train", file_name+".jpg"))
                 # copying train labels
-                shutil.copy(os.path.join(annot_dir, file_name+".txt"), os.path.join(o_label_path, f"train{suffix}", file_name+".txt"))
+                shutil.copy(os.path.join(annot_dir, file_name+".txt"), os.path.join(o_label_path, f"train", file_name+".txt"))
 
             elif idx in val_idx:
                 # copying val images
-                shutil.copy(os.path.join(images_dir, file_name+".jpg"), os.path.join(o_image_path, f"val{suffix}", file_name+".jpg"))
+                shutil.copy(os.path.join(images_dir, file_name+".jpg"), os.path.join(o_image_path, f"val", file_name+".jpg"))
                 # copying val labels
-                shutil.copy(os.path.join(annot_dir, file_name+".txt"), os.path.join(o_label_path, f"val{suffix}", file_name+".txt"))
+                shutil.copy(os.path.join(annot_dir, file_name+".txt"), os.path.join(o_label_path, f"val", file_name+".txt"))
 
 
         # creating val.txt and train.txt file
-        if notused:
-            write_file_paths_to_file(os.path.join(datasplit_path, "val_all.txt"),os.path.join(o_image_path, "val_left"),"a")
-            write_file_paths_to_file(os.path.join(datasplit_path, "train_all.txt"),os.path.join(o_image_path, "train_left"),"a")
-        else:
-            write_file_paths_to_file(os.path.join(datasplit_path, "val.txt"),os.path.join(o_image_path, "val"),"a")
-            write_file_paths_to_file(os.path.join(datasplit_path, "train.txt"),os.path.join(o_image_path, "train"),"a")
-            write_file_paths_to_file(os.path.join(datasplit_path, "train_all.txt"),os.path.join(o_image_path, "train"),"a")
-            write_file_paths_to_file(os.path.join(datasplit_path, "val_all.txt"),os.path.join(o_image_path, "val"),"a")
-       
-
+        write_file_paths_to_file(os.path.join(datasplit_path, "val.txt"),os.path.join(o_image_path, "val"),"w")
+        write_file_paths_to_file(os.path.join(datasplit_path, "train.txt"),os.path.join(o_image_path, "train"),"w")
+ 
         # creating cryo_training.yaml file
         training={
             "train": f"{os.path.join(datasplit_path, 'train.txt')}",
@@ -169,13 +154,6 @@ def main(argv):
     Path(os.path.join(datasplit_path,"labels","val")).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(datasplit_path,"labels","test")).mkdir(parents=True, exist_ok=True)
 
-    Path(os.path.join(datasplit_path,"images","train_left")).mkdir(parents=True, exist_ok=True)
-    Path(os.path.join(datasplit_path,"images","val_left")).mkdir(parents=True, exist_ok=True)
-    Path(os.path.join(datasplit_path,"images","test_left")).mkdir(parents=True, exist_ok=True)
-
-    Path(os.path.join(datasplit_path,"labels","train_left")).mkdir(parents=True, exist_ok=True)
-    Path(os.path.join(datasplit_path,"labels","val_left")).mkdir(parents=True, exist_ok=True)
-    Path(os.path.join(datasplit_path,"labels","test_left")).mkdir(parents=True, exist_ok=True)
     # micrograph jpegs
     images_dir = os.path.join(FLAGS.datasets_path,"raw",FLAGS.dataset,"denoised_micrographs","jpg")
     # ground truth coordinates in csv
@@ -185,13 +163,10 @@ def main(argv):
     dvset=pd.read_csv(f"meta/development_set{FLAGS.tag}.txt",names=['name','isnotused'])
     tstset=pd.read_csv(f"meta/test_set{FLAGS.tag}.txt",names=['name','isnotused'])
     set=0
-    notused=False
     
     if dvset["name"].astype(str).isin([FLAGS.dataset]).any():
-        notused=(dvset[dvset["name"].astype(str)==FLAGS.dataset]["isnotused"].reset_index(drop=True)[0]==0)
         set=1 #development set
     elif tstset["name"].astype(str).isin([FLAGS.dataset]).any():
-        notused=(tstset[tstset["name"].astype(str)==FLAGS.dataset]["isnotused"].reset_index(drop=True)[0]==0)
         set=2 #test set
     else:
         logging.info(f"Dataset name {FLAGS.dataset} not found in lists. Please check your development and test lists, and try again.")
@@ -201,7 +176,7 @@ def main(argv):
     if FLAGS.bounding_box:
         
         annotated=calculate_bounding_box(images_dir, coords_dir, annot_dir)
-        logging.debug(f"set {set}, notused:{notused}, annotated:{annotated}")
+        logging.debug(f"set {set}, annotated:{annotated}")
     else:
         if os.path.exists(annot_dir) and (len(os.listdir(annot_dir))>0):
             logging.info("annotation file found")
@@ -210,9 +185,9 @@ def main(argv):
             return
 
     
-    train,val,test=prep_datasplit(images_dir, annot_dir, set,notused)
+    train,val,test=prep_datasplit(images_dir, annot_dir, set)
     with open("meta/development_set_split.txt", "a") as f:
-            f.write(f"{FLAGS.dataset},{annotated},{train},{val},{test},\n")
+        f.write(f"{FLAGS.dataset},{train},{val},{test},\n")
 
 if __name__ == '__main__':
     
