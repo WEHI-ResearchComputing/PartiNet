@@ -61,8 +61,8 @@ def main():
 @click.option("--labels", required=True, help="Path to the labels directory")
 @click.option("--images", required=True, help="Path to the images directory")
 @click.option("--output", required=True, help="Path to the output directory")
-def preprocess(labels, images, output):
-    click.echo("Preprocessing the micrographs...")
+def train_split(labels, images, output):
+    click.echo("Splitting micrographs for training and validation...")
     import partinet.split_train
     partinet.split_train.main(labels, images, output)
 
@@ -75,6 +75,14 @@ def star(labels, images, output,conf):
     click.echo("Generating STAR file...")
     import partinet.star_file
     partinet.star_file.main(labels,images,output,conf)
+
+@main.command()
+@click.option("--source", required=True, help="Path to Raw micrographs")
+@click.option('--project', required=True, help='save denoised micrographs to project/denoised', show_default=True))
+def denoise(source, project):
+    click.echo("Denoising micrographs...")
+    import partinet.pooled_denoise_proc
+    partinet.pooled_denoise_proc(source,project)
 
 
 @main.group()
