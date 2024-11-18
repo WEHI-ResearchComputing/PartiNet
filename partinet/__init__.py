@@ -1,7 +1,9 @@
 import click
-import sys
+import sys, os
 
-__version__ = "0.0.1"
+__version__ = "0.1.1"
+
+DYNAMICDET_AVAILABLE_MODELS = ["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6", "yolov7-e6e"]
 
 def print_params(params: dict) -> None:
     """
@@ -48,7 +50,7 @@ def train_common_args(f):
     f = click.option('--hyp', type=click.Choice(["scratch.p5", "scratch.p6", "finetune.dynamic.adam"]), default='scratch.p5', help='hyperparameters path', show_default=True)(f)
     f = click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)(f)
     f = click.option('--weight', type=str, help='initial weights path', required=True)(f)
-    f = click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
+    f = click.option('--backbone-detector', type=click.Choice(DYNAMICDET_AVAILABLE_MODELS, case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
 
     return f
 
@@ -125,7 +127,7 @@ def step2(**params):
     partinet.DynamicDet.train_step2.main(opt)
 
 @main.command()
-@click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
+@click.option('--backbone-detector', type=click.Choice(DYNAMICDET_AVAILABLE_MODELS, case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
 @click.option('--weight', type=str, help='model.pt path(s)', required=True)
 @click.option('--source', type=str, default='inference/images', help='source', show_default=True)  # file/folder, 0 for webcam
 @click.option('--num-classes', type=int, default=80, help='number of classes', show_default=True)
@@ -161,6 +163,41 @@ def detect(**params):
     import partinet.DynamicDet.detect
     with partinet.DynamicDet.detect.torch.no_grad():
         partinet.DynamicDet.detect.detect(opt)
+
+@main.command()
+@click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
+@click.option('--weight', type=str, help='model.pt path(s)', required=True)
+@click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)
+@click.option('--batch-size', type=int, default=1, help='total batch size for all GPUs', show_default=True)
+@click.option('--img-size', type=int, default=640, help='validation image size (pixels)', show_default=True)
+@click.option('--conf-thres', type=float, default=0.001, help='object confidence threshold', show_default=True)
+@click.option('--iou-thres', type=float, default=0.65, help='IOU threshold for NMS', show_default=True)
+@click.option('--task', type=click.Choice(["train", "val", "test"]), default="test", help='train, val, test, speed or study', show_default=True)
+@click.option('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu', show_default=True)
+@click.option('--single-cls', is_flag=True, help='train multi-class data as single-class') # Might not be needed if always doing single class
+@click.option('--augment', is_flag=True, help='augmented inference')
+@click.option('--verbose', is_flag=True, help='report mAP by class') # Might not be needed if always doing single class
+@click.option('--save-txt', is_flag=True, help='save results to *.txt')
+@click.option('--save-hybrid', is_flag=True, help='save label+prediction hybrid results to *.txt')
+@click.option('--save-conf', is_flag=True, help='save confidences in --save-txt labels')
+@click.option('--save-json', is_flag=True, help='save a cocoapi-compatible JSON results file')
+@click.option('--project', default='runs/test', help='save to project/name', show_default=True)
+@click.option('--name', default='exp', help='save to project/name', show_default=True)
+@click.option('--exist-ok', is_flag=True, help='existing project/name ok, do not increment')
+@click.option('--v5-metric', is_flag=True, help='assume maximum recall as 1.0 in AP calculation', show_default=True)
+@click.option('--dy-thres', type=float, default=0.5, help='dynamic thres', show_default=True)
+@click.option('--save-results', is_flag=True, help='save results')
+def test(**params):
+
+    click.echo("Performing DynamicDet test with config:\n    ", nl=False)
+    print_params(params)
+
+    import argparse
+    opt = argparse.Namespace(**params)
+
+    import partinet.DynamicDet.test
+    with partinet.DynamicDet.test.torch.no_grad():
+        partinet.DynamicDet.test.main(opt)
 
 if __name__ == "__main__":
     main()
