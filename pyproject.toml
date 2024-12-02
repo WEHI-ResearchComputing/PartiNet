@@ -39,6 +39,7 @@ dependencies = [
   "click",
   "tensorboard",
   "scikit-learn",
+  "mrcfile",
 ]
 
 [project.scripts]

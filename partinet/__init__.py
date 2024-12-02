@@ -63,7 +63,7 @@ def main():
 @click.option("--labels", required=True, help="Path to the labels directory")
 @click.option("--images", required=True, help="Path to the images directory")
 @click.option("--output", required=True, help="Path to the output directory")
-def train_split(labels, images, output):
+def split(labels, images, output):
     click.echo("Splitting micrographs for training and validation...")
     import partinet.process_utils.split_train
     partinet.process_utils.split_train.main(labels, images, output)
