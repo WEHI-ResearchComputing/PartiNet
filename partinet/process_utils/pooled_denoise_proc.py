@@ -1,7 +1,7 @@
 import os
 import cv2
 from pathlib import Path
-from guided_denoiser import denoise
+from partinet.process_utils.guided_denoiser import denoise
 import logging
 import multiprocessing
 import argparse
