@@ -8,10 +8,11 @@ import argparse
 import gc
 from concurrent.futures import ProcessPoolExecutor
 from typing import List, Tuple
+import mrcfile
 
 # Function to perform CLAHE-based denoising
 
-def clahe_denoise(args: Tuple[str, str]) -> None:
+def clahe_denoise(args: Tuple[str, str, str]) -> None:
     """
     Applies the guided denoising algorithm to an input image and saves the denoised result.
 
@@ -19,16 +20,19 @@ def clahe_denoise(args: Tuple[str, str]) -> None:
         args (Tuple[str, str]):
             - src_path: Path to the source micrograph file.
             - dest_path: Path to save the denoised image.
+            - format: output format of denoised images
 
     Raises:
         Exception: Logs any exceptions that occur during processing.
     """
     try:
-        src_path, dest_path = args
+        src_path, dest_path, format = args
         # Perform denoising
         denoised = denoise(src_path)
-        # Save the denoised image
-        cv2.imwrite(dest_path, denoised)
+        if format == "mrc":
+            mrcfile.write(dest_path,data=denoised)
+        else:
+            cv2.imwrite(dest_path, denoised)
         logging.info(f"Processed image {src_path} to dest. {dest_path}")
         del denoised
         gc.collect()
@@ -37,7 +41,7 @@ def clahe_denoise(args: Tuple[str, str]) -> None:
 
 # Function to process all files in a directory
 
-def process_directory(micrographs_dir: str, clahe_denoised_dir: str, max_workers: int) -> None:
+def process_directory(micrographs_dir: str, clahe_denoised_dir: str, max_workers: int, format: str) -> None:
     """
     Processes all `.mrc` files in the given directory using parallel workers for denoising.
 
@@ -45,6 +49,7 @@ def process_directory(micrographs_dir: str, clahe_denoised_dir: str, max_workers
         micrographs_dir (str): Path to the directory containing raw micrograph files.
         clahe_denoised_dir (str): Path to the directory where denoised images will be saved.
         max_workers (int): Number of worker processes to use for parallel processing.
+        format (str): Output format of denoised images
 
     Notes:
         - Only `.mrc` files are processed.
@@ -53,16 +58,16 @@ def process_directory(micrographs_dir: str, clahe_denoised_dir: str, max_workers
     os.makedirs(clahe_denoised_dir, exist_ok=True)
     logging.info(f"Directory ready: {clahe_denoised_dir}")
 
-    tasks: List[Tuple[str, str]] = []
+    tasks: List[Tuple[str, str, str]] = []
     # Iterate through files in the directory
     for file_name in os.listdir(micrographs_dir):
         if file_name.endswith(".mrc"):
             src_path = os.path.join(micrographs_dir, file_name)
-            dest_path = os.path.join(clahe_denoised_dir, file_name.replace(".mrc", ".png"))
+            dest_path = os.path.join(clahe_denoised_dir, file_name.replace(".mrc", "."+format))
             if os.path.exists(dest_path):
                 logging.info(f"{dest_path} already exists!")
             else:
-                tasks.append((src_path, dest_path))
+                tasks.append((src_path, dest_path, format))
 
     # Parallel processing of tasks
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -73,7 +78,7 @@ def process_directory(micrographs_dir: str, clahe_denoised_dir: str, max_workers
 
 # Main function
 
-def main(source_dir: str, project_dir: str, ncpu: int) -> None:
+def main(source_dir: str, project_dir: str, ncpu: int, format: str) -> None:
     """
     Main function to set up logging, determine available CPUs, and start the denoising process.
 
@@ -81,6 +86,7 @@ def main(source_dir: str, project_dir: str, ncpu: int) -> None:
         source_dir (str): Path to the directory containing raw micrographs.
         project_dir (str): Path to the project directory where denoised images will be saved.
         ncpu (int): Number of CPUs to use for parallel processing. Defaults to half the available CPUs.
+        format (str): Output format of denoised images
 
     Notes:
         - Logging is configured to write messages to a log file and the console.
@@ -110,7 +116,7 @@ def main(source_dir: str, project_dir: str, ncpu: int) -> None:
     logging.info(f"Saving denoised micrographs in {denoise_dir}")
 
     # Process the directory
-    process_directory(source_dir, denoise_dir, ncpu)
+    process_directory(source_dir, denoise_dir, ncpu, format)
 
 # Command-line argument parsing
 
@@ -123,15 +129,17 @@ def parse_args() -> argparse.Namespace:
             - raw: Path to raw micrographs.
             - project: Path to the project directory.
             - ncpu: Number of CPUs to use.
+            - format: output format of denoised images
     """
     parser = argparse.ArgumentParser(description="Denoise micrographs with guided CryoSegNet-style filter")
     parser.add_argument("--raw", required=True, help="Path to raw micrographs")
     parser.add_argument("--project", required=True, help="Denoised micrographs saved in project/denoised")
     parser.add_argument('--ncpu', type=int, default=None, help='Number of CPUs to use')
+    parser.add_argument('--format', type=str, choices=["png","jpg","mrc"], default="png", help='Output format of denoised images')
     return parser.parse_args()
 
 # Entry point for the script
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.raw, args.project, args.ncpu)
+    main(args.raw, args.project, args.ncpu, args.format)
