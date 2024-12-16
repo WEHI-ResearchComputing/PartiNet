@@ -8,4 +8,4 @@ RUN python -m pip install --no-cache-dir --no-cache /opt/PartiNet
 
 LABEL AUTHORS Mihin Perera, Edward Yang, Julie Iskander
 LABEL MAINTAINERS Mihin Perera, Edward Yang, Julie Iskander
-LABEL VERSION v0.1.1
+LABEL VERSION v0.2.0

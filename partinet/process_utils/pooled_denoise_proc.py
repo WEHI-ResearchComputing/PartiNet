@@ -8,7 +8,7 @@ import argparse
 import gc
 from concurrent.futures import ProcessPoolExecutor
 
-MAX_WORKERS = max(1, multiprocessing.cpu_count() // 2)
+# MAX_WORKERS = max(1, multiprocessing.cpu_count() // 2)
 
 def clahe_denoise(args):
     try:
@@ -21,7 +21,7 @@ def clahe_denoise(args):
     except Exception as e:
         logging.error(f"Failed to process {src_path}: {str(e)}")
 
-def process_directory(micrographs_dir, clahe_denoised_dir):
+def process_directory(micrographs_dir, clahe_denoised_dir,MAX_WORKERS):
     os.makedirs(clahe_denoised_dir, exist_ok=True)
     logging.info(f"Directory ready: {clahe_denoised_dir}")
 
@@ -41,25 +41,41 @@ def process_directory(micrographs_dir, clahe_denoised_dir):
             future.result()
     gc.collect()
 
-def main(source_dir, project_dir):
+def main(source_dir, project_dir, ncpu):
     logging.basicConfig(filename="partinet_denoise.log", level=logging.INFO, format='%(asctime)s - %(message)s')
+    logging.getLogger().addHandler(logging.StreamHandler())
+
     denoise_dir = os.path.join(project_dir,"denoised")
     logger_name = project_dir + "/partinet_denoise.log"
     logging.basicConfig(filename=logger_name, level=logging.INFO, format='%(asctime)s - %(message)s')
-    num_cpus = multiprocessing.cpu_count()
-    logging.info(f"Number of available CPUs: {num_cpus}")
+
+    max_available_cpus = multiprocessing.cpu_count()
+    max_workers = max(1, max_available_cpus // 2)
+
+    if ncpu is not None:
+        ncpu = min(ncpu, max_workers)
+    else:
+        ncpu = max_workers
+
+    logging.info(f"Using {ncpu} workers out of {max_available_cpus} available CPUs.")
+    
+    # num_cpus = max(multiprocessing.cpu_count(),ncpu)
+    # logging.info(f"Number of available CPUs: {num_cpus}")
+
     logging.info(f"Processing raw micrographs in {source_dir}")
     logging.info(f"Saving denoised micrographs in {denoise_dir}")
     
-    process_directory(source_dir, denoise_dir)
+    # process_directory(source_dir, denoise_dir,ncpu)
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Denoise micrographs with guided CryoSegNet-style filter")
     parser.add_argument("--raw", required=True, help="Path to raw micrographs")
     parser.add_argument("--project", required=True, help="Denoised micrographs saved in project/denoised")
+    parser.add_argument('--ncpu', type=int, default=None, help='Number of CPUs to use')
+
     
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.raw, args.project)
+    main(args.raw, args.project, args.ncpu)

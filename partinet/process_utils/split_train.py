@@ -8,8 +8,6 @@ from sklearn.model_selection import train_test_split as tts
 def main(labels_path, images_path, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    os.makedirs(os.path.join(output_dir, "images"))
-    os.makedirs(os.path.join(output_dir, "labels"))
     os.makedirs(os.path.join(output_dir, "images", "train"))
     os.makedirs(os.path.join(output_dir, "images", "val"))
     os.makedirs(os.path.join(output_dir, "labels", "train"))
