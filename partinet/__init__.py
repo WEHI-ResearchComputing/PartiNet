@@ -82,7 +82,7 @@ def star(labels, images, output,conf):
 @click.option("--source", type=str, required=True, help="Path to Raw micrographs")
 @click.option('--project', type=str, required=True, help='save denoised micrographs to project/denoised', show_default=True)
 @click.option('--num_workers', type=int, default=None, help='Number of workers for denoising micrographs')
-@click.option('--format', type=str, type=click.Choice(["png", "jpg", "mrc"], case_sensitive=True) default="png",show_default=True, help='Output format of denoised micrographs')
+@click.option('--format', type=str, type=click.Choice(["png", "jpg", "mrc"], case_sensitive=True), default="png",show_default=True, help='Output format of denoised micrographs')
 def denoise(source, project, num_workers,format):
     click.echo("Denoising micrographs...")
     import partinet.process_utils.pooled_denoise_proc
