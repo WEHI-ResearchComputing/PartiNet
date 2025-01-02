@@ -240,7 +240,7 @@ class Model(nn.Module):
                 self.get_score = False
             if self.get_score:
                 return score
-
+        print(f"This micrograph has difficulty score {score} for threshold {self.dy_thres}")
         need_second = self.training or (not self.dynamic) or score[:, 0] < self.dy_thres
         need_first_head = self.training or (self.dynamic and score[:, 0] >= self.dy_thres)
 
