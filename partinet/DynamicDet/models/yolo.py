@@ -240,11 +240,12 @@ class Model(nn.Module):
                 self.get_score = False
             if self.get_score:
                 return score
-        print(f"This micrograph has difficulty score {score} for threshold {self.dy_thres}")
+        print(f"This micrograph has difficulty score {score[:, 0][0]} for threshold {self.dy_thres}\n")
         need_second = self.training or (not self.dynamic) or score[:, 0] < self.dy_thres
         need_first_head = self.training or (self.dynamic and score[:, 0] >= self.dy_thres)
 
         if need_second:
+            print(f"This micrograph has used both detectors\n")
             for m in self.model_b2:
                 if m.f == 'input':
                     x = input_x
@@ -267,6 +268,7 @@ class Model(nn.Module):
                 y.append(x if m.i in self.save_b2 else None)  # save output
 
         if need_first_head:
+            print(f"This micrograph has used only one detector\n")
             for m in self.model_h:
                 if m.f != -1:  # if not from previous layer
                     x = y[m.f] if isinstance(m.f, int) else [x if j == -1 else y[j] for j in m.f]  # from earlier layers
