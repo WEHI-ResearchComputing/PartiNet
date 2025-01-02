@@ -1,7 +1,7 @@
 import click
 import sys, os
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 DYNAMICDET_AVAILABLE_MODELS = ["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6", "yolov7-e6e"]
 
@@ -60,9 +60,34 @@ def main():
     pass
 
 @main.command()
-def preprocess():
-    click.echo("This will preprocess the micrographs.")
-    raise NotImplementedError("Not implemented yet!")
+@click.option("--labels", type=str, required=True, help="Path to the labels directory")
+@click.option("--images", type=str, required=True, help="Path to the images directory")
+@click.option("--output", type=str, required=True, help="Path to the output directory")
+def split(labels, images, output):
+    click.echo("Splitting micrographs for training and validation...")
+    import partinet.process_utils.split_train
+    partinet.process_utils.split_train.main(labels, images, output)
+
+@main.command()
+@click.option("--labels", type=str, required=True, help="Path to the labels directory")
+@click.option("--images", type=str, required=True, help="Path to the images directory")
+@click.option("--output", type=str, required=True, help="Path to the output STAR file")
+@click.option("--conf", type=float, default=0.0, help="Minimum confidence threshold from predictions")
+def star(labels, images, output,conf):
+    click.echo("Generating STAR file...")
+    import partinet.process_utils.star_file
+    partinet.process_utils.star_file.main(labels,images,output,conf)
+
+@main.command()
+@click.option("--source", type=str, required=True, help="Path to Raw micrographs")
+@click.option('--project', type=str, required=True, help='save denoised micrographs to project/denoised', show_default=True)
+@click.option('--num_workers', type=int, default=None, help='Number of workers for denoising micrographs')
+@click.option('--img_format', type=click.Choice(["png", "jpg", "mrc"], case_sensitive=True), default="png",show_default=True, help='Output format of denoised micrographs')
+def denoise(source, project, num_workers,img_format):
+    click.echo("Denoising micrographs...")
+    import partinet.process_utils.pooled_denoise_proc
+    partinet.process_utils.pooled_denoise_proc.main(source,project,num_workers,img_format)
+
 
 @main.group()
 def train():

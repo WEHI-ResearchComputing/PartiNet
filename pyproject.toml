@@ -37,7 +37,9 @@ dependencies = [
   "pandas >= 1.1.4",
   "seaborn >= 0.11.0",
   "click",
-  "tensorboard"
+  "tensorboard",
+  "scikit-learn",
+  "mrcfile",
 ]
 
 [project.scripts]
