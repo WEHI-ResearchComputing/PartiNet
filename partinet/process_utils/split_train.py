@@ -36,8 +36,8 @@ def main(labels_path: str, images_path: str, output_dir: str):
         if idx in train_idx:
             # Copy training images and labels
             shutil.copy(
-                os.path.join(images_path, file_name + ".jpg"),
-                os.path.join(output_dir, "images", "train", file_name + ".jpg")
+                os.path.join(images_path, file_name + ".png"),
+                os.path.join(output_dir, "images", "train", file_name + ".png")
             )
             shutil.copy(
                 os.path.join(labels_path, file_name + ".txt"),
@@ -46,8 +46,8 @@ def main(labels_path: str, images_path: str, output_dir: str):
         elif idx in val_idx:
             # Copy validation images and labels
             shutil.copy(
-                os.path.join(images_path, file_name + ".jpg"),
-                os.path.join(output_dir, "images", "val", file_name + ".jpg")
+                os.path.join(images_path, file_name + ".png"),
+                os.path.join(output_dir, "images", "val", file_name + ".png")
             )
             shutil.copy(
                 os.path.join(labels_path, file_name + ".txt"),
