@@ -140,7 +140,7 @@ def step2(**params):
 @click.option('--source', type=str, default='inference/images', help='source', show_default=True)  # file/folder, 0 for webcam
 @click.option('--num-classes', type=int, default=1, help='number of classes', show_default=True)
 @click.option('--img-size', type=int, default=1280, help='inference size (pixels)', show_default=True)
-@click.option('--conf-thres', type=float, default=0.1, help='object confidence threshold', show_default=True)
+@click.option('--conf-thres', type=float, default=0.0, help='object confidence threshold', show_default=True)
 @click.option('--iou-thres', type=float, default=0.2, help='IOU threshold for NMS', show_default=True)
 @click.option('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu', show_default=True)
 @click.option('--view-img', is_flag=True, help='display results')
