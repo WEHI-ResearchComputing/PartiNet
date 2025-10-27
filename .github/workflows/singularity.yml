@@ -1,12 +1,8 @@
 name: Singularity Build
-on: 
+on:
   push:
-    # Edit the branches here if you want to change deploy behavior
-    branches:
-      - main
-
-  # Do the builds on all pull requests (to test them)
-  pull_request: []
+    branches: ['main']
+  pull_request:
 
 jobs:
   build-test-containers:
