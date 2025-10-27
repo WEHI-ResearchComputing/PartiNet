@@ -60,19 +60,13 @@ def main():
     pass
 
 @main.command()
-@click.option("--star", type=str, required=True, help="Path to input STAR file (or labels directory if using --split-only)")
-@click.option("--images", type=str, required=True, help="Path to directory containing micrograph images")
-@click.option("--output", type=str, required=True, help="Path to output directory for organized train/val data")
-@click.option("--class-id", type=int, default=0, help="Class ID to assign to all particles (default: 0)")
-@click.option("--test-size", type=float, default=0.25, help="Proportion of dataset to use for validation (default: 0.25)")
-@click.option("--split-only", is_flag=True, help="Skip STAR conversion and only split existing labels")
-def split(star, images, output, class_id, test_size, split_only):
-    if split_only:
-        click.echo("Splitting existing labels into training and validation sets...")
-    else:
-        click.echo("Converting STAR file to YOLO format and splitting for training...")
+@click.option("--labels", type=str, required=True, help="Path to the labels directory")
+@click.option("--images", type=str, required=True, help="Path to the images directory")
+@click.option("--output", type=str, required=True, help="Path to the output directory")
+def split(labels, images, output):
+    click.echo("Splitting micrographs for training and validation...")
     import partinet.process_utils.split_train
-    partinet.process_utils.split_train.main(star, images, output, class_id, test_size, split_only)
+    partinet.process_utils.split_train.main(labels, images, output)
 
 @main.command()
 @click.option("--labels", type=str, required=True, help="Path to the labels directory")
