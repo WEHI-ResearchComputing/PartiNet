@@ -44,13 +44,13 @@ def train_common_args(f):
     f = click.option('--resume-ckpt', type=str, default='', help='checkpoint to resume from')(f)
     f = click.option('--resume', is_flag=True, help='resume most recent training')(f)
     f = click.option('--rect', is_flag=True, help='rectangular training')(f)
-    f = click.option('--img-size', nargs=2, type=int, default=[1280, 1280], help='[train, test] image sizes', show_default=True)(f)
+    f = click.option('--img-size', nargs=2, type=int, default=[640, 640], help='[train, test] image sizes', show_default=True)(f)
     f = click.option('--batch-size', type=int, default=16, help='total batch size for all GPUs', show_default=True)(f)
     f = click.option('--epochs', type=int, default=300, show_default=True)(f)
     f = click.option('--hyp', type=click.Choice(["scratch.p5", "scratch.p6", "finetune.dynamic.adam"]), default='scratch.p5', help='hyperparameters path', show_default=True)(f)
     f = click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)(f)
     f = click.option('--weight', type=str, help='initial weights path', required=True)(f)
-    f = click.option('--backbone-detector', type=click.Choice(DYNAMICDET_AVAILABLE_MODELS, case_sensitive=False), help='The choice of backbone to be used.', default="yolov7-w6", show_default=True)(f)
+    f = click.option('--backbone-detector', type=click.Choice(DYNAMICDET_AVAILABLE_MODELS, case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)(f)
 
     return f
 
@@ -78,7 +78,7 @@ def split(star, images, output, class_id, test_size, split_only):
 @click.option("--labels", type=str, required=True, help="Path to the labels directory")
 @click.option("--images", type=str, required=True, help="Path to the images directory")
 @click.option("--output", type=str, required=True, help="Path to the output STAR file")
-@click.option("--conf", type=float, default=0.1, help="Minimum confidence threshold from predictions")
+@click.option("--conf", type=float, default=0.0, help="Minimum confidence threshold from predictions")
 def star(labels, images, output,conf):
     click.echo("Generating STAR file...")
     import partinet.process_utils.star_file
@@ -106,7 +106,7 @@ def train():
 def step1(**params):
 
     # dump params to terminal
-    click.echo("Performing PartiNet training step 1 with config:\n    ", nl=False)
+    click.echo("Performing DynamicDet training step 1 with config:\n    ", nl=False)
     params["img_size"] = list(params["img_size"])
     print_params(params)
 
@@ -122,7 +122,7 @@ def step1(**params):
 @train_common_args
 def step2(**params):
 
-    click.echo("Performing PartiNet training step 2 with config:\n    ", nl=False)
+    click.echo("Performing DynamicDet training step 2 with config:\n    ", nl=False)
     params["img_size"] = list(params["img_size"])
     print_params(params)
 
@@ -135,13 +135,13 @@ def step2(**params):
     partinet.DynamicDet.train_step2.main(opt)
 
 @main.command()
-@click.option('--backbone-detector', type=click.Choice(DYNAMICDET_AVAILABLE_MODELS, case_sensitive=False), help='The choice of backbone to be used.', default="yolov7-w6", show_default=True)
+@click.option('--backbone-detector', type=click.Choice(DYNAMICDET_AVAILABLE_MODELS, case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
 @click.option('--weight', type=str, help='model.pt path(s)', required=True)
 @click.option('--source', type=str, default='inference/images', help='source', show_default=True)  # file/folder, 0 for webcam
-@click.option('--num-classes', type=int, default=1, help='number of classes', show_default=True)
-@click.option('--img-size', type=int, default=1280, help='inference size (pixels)', show_default=True)
-@click.option('--conf-thres', type=float, default=0.0, help='object confidence threshold', show_default=True)
-@click.option('--iou-thres', type=float, default=0.2, help='IOU threshold for NMS', show_default=True)
+@click.option('--num-classes', type=int, default=80, help='number of classes', show_default=True)
+@click.option('--img-size', type=int, default=640, help='inference size (pixels)', show_default=True)
+@click.option('--conf-thres', type=float, default=0.25, help='object confidence threshold', show_default=True)
+@click.option('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS', show_default=True)
 @click.option('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu', show_default=True)
 @click.option('--view-img', is_flag=True, help='display results')
 @click.option('--save-txt', is_flag=True, help='save results to *.txt')
@@ -162,7 +162,7 @@ def detect(**params):
     # "all classes"
     params["classes"] = params["classes"] or None
 
-    click.echo("Performing PartiNet particle detection with config:\n    ", nl=False)
+    click.echo("Performing DynamicDet detection with config:\n    ", nl=False)
     print_params(params)
 
     import argparse
@@ -173,13 +173,13 @@ def detect(**params):
         partinet.DynamicDet.detect.detect(opt)
 
 @main.command()
-@click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7-w6", show_default=True)
+@click.option('--backbone-detector', type=click.Choice(["yolov7", "yolov7-w6", "yolov7x"], case_sensitive=False), help='The choice of backbone to be used.', default="yolov7", show_default=True)
 @click.option('--weight', type=str, help='model.pt path(s)', required=True)
 @click.option('--data', type=str, default='data/coco.yaml', help='data.yaml path', show_default=True)
 @click.option('--batch-size', type=int, default=1, help='total batch size for all GPUs', show_default=True)
-@click.option('--img-size', type=int, default=1280, help='validation image size (pixels)', show_default=True)
-@click.option('--conf-thres', type=float, default=0.3, help='object confidence threshold', show_default=True)
-@click.option('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS', show_default=True)
+@click.option('--img-size', type=int, default=640, help='validation image size (pixels)', show_default=True)
+@click.option('--conf-thres', type=float, default=0.001, help='object confidence threshold', show_default=True)
+@click.option('--iou-thres', type=float, default=0.65, help='IOU threshold for NMS', show_default=True)
 @click.option('--task', type=click.Choice(["train", "val", "test"]), default="test", help='train, val, test, speed or study', show_default=True)
 @click.option('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu', show_default=True)
 @click.option('--single-cls', is_flag=True, help='train multi-class data as single-class') # Might not be needed if always doing single class
@@ -197,7 +197,7 @@ def detect(**params):
 @click.option('--save-results', is_flag=True, help='save results')
 def test(**params):
 
-    click.echo("Performing PartiNet test with config:\n    ", nl=False)
+    click.echo("Performing DynamicDet test with config:\n    ", nl=False)
     print_params(params)
 
     import argparse
