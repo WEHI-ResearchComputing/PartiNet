@@ -1,7 +1,6 @@
 name: Singularity Build
 on: 
   push:
-
     # Edit the branches here if you want to change deploy behavior
     branches:
       - main
