@@ -1,326 +1,151 @@
-# PartiNet
-A particle picking tool that uses DynamicDet and trained on CryoPPP
+# PartiNet 🔬
 
-## File structure
+PartiNet is a three-stage pipeline for automated particle picking in cryo-EM micrographs, combining advanced denoising with state-of-the-art deep learning detection.
 
-* DynamicDet  --> submodule forked from [DynamicDet repo](https://github.com/VDIGPKU/DynamicDet)
-* scripts
-    * meta --> have text files that include:
-        * `datasets.txt` : preprocess script to choose datasets to denoise and calculate bounding box ()
-        * `development_set.txt` & `test_set.txt` : preprocess script to split into development and test sets.
-        * `fix_names_datasets.txt`: contain dataset names that reqiored manual intervention after download.
-    * `download.sh` : Slurm job to get dataset name then download and untar. 
-    You can also retrieve from RCP a tarred file`raw.tar.gz` with all datasets and untar then using 
-            ```
-            for f in /vast/projects/RCP/PartiNet_data/tarred/*.tar.gz; do tar xvf "$f"; done
-            ```
 
-    * `visualise_denoise_reaults.ipynb` : for checking results visually.
-    *  `preprocess.sh`: Slurm job that runs 
-        * topaz denoising 
-        * `preprocess.py` which calculates bounding box then split images of a dataset into train and val sets if in the development_set, or move to test if in test_set.
-    * `generate-star-file` --> ??
-    * `generate-star-file` --> ??
-    * `detect` --> ??
-    * `train_step1` and `train_step2`  --> ??
+## Features
 
-## Install
+- 🧹 Advanced denoising for improved signal-to-noise ratio
+- 🎯 Deep learning-based particle detection
+- ⚡ Multi-GPU support for faster processing
+- 🔄 Seamless integration with RELION workflows
+- 📊 Confidence-based particle filtering
+- 🖼️ Visual detection validation
+
+## Prerequisites
+
+Before starting, ensure you have:
+- Motion-corrected micrographs
+- GPU access (recommended)
+- PartiNet installation (see Installation section)
+
+## Installation
 
 ```bash
-git clone --recursive git@github.com:WEHI-ResearchComputing/PartiNet.git
+git clone git@github.com:WEHI-ResearchComputing/PartiNet.git
 cd PartiNet
 pip install .
 ```
 
-## Usage
+Alternatively, use our containers:
+
+```bash
+# Docker
+docker run ghcr.io/wehi-researchcomputing/partinet:latest
+
+# Singularity/Apptainer
+singularity run oras://ghcr.io/wehi-researchcomputing/partinet:latest
+```
+
+## Directory Structure
+
+```
+project_directory/
+├── motion_corrected/          # 📁 Input micrographs
+├── denoised/                  # 🧹 Denoised outputs
+├── exp/                       # 🎯 Detection results
+│   ├── labels/               # 📋 Coordinates
+│   └── ...                   # 🖼️ Visualizations
+└── partinet_particles.star    # ⭐ Final output
+```
+
+## Pipeline Stages
+
+### 1. Denoise
+```bash
+partinet denoise \
+  --source /data/my_project/motion_corrected \
+  --project /data/my_project
+```
+
+### 2. Detect
+```bash
+partinet detect \
+  --weight /path/to/model_weights.pt \
+  --source /data/partinet_picking/denoised \
+  --device 0,1,2,3 \
+  --project /data/partinet_picking
+```
+
+### 3. Generate STAR File
+```bash
+partinet star \
+  --labels /data/my_project/exp/labels \
+  --images /data/my_project/denoised \
+  --output /data/my_project/partinet_particles.star \
+  --conf 0.1
+```
+
+## Key Parameters
+
+### Detection
+- `--backbone-detector`: Choice of neural network architecture
+- `--weight`: Path to model weights
+- `--conf-thres`: Detection confidence threshold
+- `--iou-thres`: Overlap filtering threshold
+- `--device`: GPU device selection
+
+### STAR Generation
+- `--conf`: Confidence threshold for particle filtering
+- `--output`: Path for final STAR file
+
+## Output Files
+
+1. **Denoised Micrographs** (`denoised/*.mrc`)
+   - Cleaned micrographs with improved SNR
+
+2. **Detection Results** (`exp/`)
+   - `labels/*.txt`: Particle coordinates
+   - `*.png`: Visualization overlays
+
+3. **STAR File** (`partinet_particles.star`)
+   - Ready for RELION processing
+
+## Advanced Usage
+
+For detailed information about specific commands:
 
 ```bash
 partinet --help
-```
-```
-Usage: partinet [OPTIONS] COMMAND [ARGS]...
-
-Options:
-  --version  Show the version and exit.
-  --help     Show this message and exit.
-
-Commands:
-  detect
-  preprocess
-  test
-  train
+partinet <command> --help
 ```
 
-### Preprocessing
+Available commands:
+- `denoise`: Clean input micrographs
+- `detect`: Identify particles
+- `star`: Generate STAR files
+- `train`: Train custom models (step1/step2)
+- `test`: Evaluate model performance
 
-This step runs on one dataset to creating bounding boxes and split images into development and test sets.
+## Troubleshooting
 
-The Python script uses the conda env installed `/stornext/System/data/apps/rc-tools/rc-tools-1.0/bin/tools/envs/py3_11/bin/python3`
+- **GPU Issues**
+  - Verify GPU availability: `nvidia-smi`
+  - Check CUDA installation
+  - Ensure proper device selection
 
-Example run found in `preprocess.py`
+- **Path Issues**
+  - Verify directory permissions
+  - Check mount points in container setups
+  - Ensure absolute paths are used
 
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## License
+
+This project is licensed under the terms of the LICENSE file included in the repository.
+
+## Citation
+
+If you use PartiNet in your research, please cite:
 ```
-./preprocess.py --dataset <dataset_name> --datasets_path /vast/scratch/users/iskander.j/PartiNet_data/testing/ --tag _test --bounding_box
-```
-
-#### Arguments:
-
-* dataset: dataset name, e.g. 10005, and it must be a directory found in datasets_path
-* datasets_path: path to all datasets
-* tag: to add a suffix to text files used by script.
-* bounding_box: whether to run the calculate bounding box annotation step, default is false and will error if annotation directory is empty.
-
-#### How it works:
-First step is go to dataset path and create directory called `annotations` where bounding box data will be saved as `*.txt` files.
-
-Then, using the two text files `development_set<tag>.txt` & `test_set<tag>.txt`, the dataset images and label (annotations) will be split into test and development (train and val) sets and saved to `data_split` directory.
-
-The script writes 
-* noannot_images.txt: for each dataset, list of micrographs without annotation.
-* development_set_split.txt: csv that saves dataset, number of annotated micrographs, number of images in training set, number of images in validation set,number of images in test set.
-
-**Note: There are a few manual steps required before running any preprocessing (https://github.com/WEHI-ResearchComputing/PartiNet/blob/main/scripts/meta/fix_names_datasets.txt)**
-
-### Training
-
-Training the DynamicDet network is seperated into two steps and therefore two subcommands:
-
-```bash
-partinet train --help
-```
-```
-Usage: partinet train [OPTIONS] COMMAND [ARGS]...
-
-Options:
-  --help  Show this message and exit.
-
-Commands:
-  step1
-  step2
+Citation information will be added upon publication
 ```
 
-#### Training Step 1
+## Support
 
-relevant training args are passed to the `train` subcommand with step1 specific args passed to the
-`step1` subsubcommand.
-
-```bash
-partinet train step1 --help
-```
-```
-Usage: partinet train step1 [OPTIONS]
-
-Options:
-  --backbone-detector [yolov7|yolov7-w6|yolov7x]
-                                  The choice of backbone to be used.
-                                  [default: yolov7]
-  --weight TEXT                   initial weights path  [required]
-  --data TEXT                     data.yaml path  [default: data/coco.yaml]
-  --hyp [scratch.p5|scratch.p6|finetune.dynamic.adam]
-                                  hyperparameters path  [default: scratch.p5]
-  --epochs INTEGER                [default: 300]
-  --batch-size INTEGER            total batch size for all GPUs  [default: 16]
-  --img-size INTEGER...           [train, test] image sizes  [default: 640,
-                                  640]
-  --rect                          rectangular training
-  --resume                        resume most recent training
-  --resume-ckpt TEXT              checkpoint to resume from
-  --nosave                        only save final checkpoint
-  --notest                        only test final epoch
-  --noautoanchor                  disable autoanchor check
-  --bucket TEXT                   gsutil bucket
-  --cache-images                  cache images for faster training
-  --image-weights                 use weighted image selection for training
-  --device TEXT                   cuda device, i.e. 0 or 0,1,2,3 or cpu
-  --multi-scale                   vary img-size +/- 50%%
-  --single-cls                    train multi-class data as single-class
-  --adam                          use torch.optim.Adam() optimizer
-  --sync-bn                       use SyncBatchNorm, only available in DDP
-                                  mode
-  --local_rank INTEGER            DDP parameter, do not modify  [default: -1]
-  --workers INTEGER               maximum number of dataloader workers
-                                  [default: 8]
-  --project TEXT                  save to project/name  [default: runs/train]
-  --entity TEXT                   W&B entity
-  --name TEXT                     save to project/name  [default: exp]
-  --exist-ok                      existing project/name ok, do not increment
-  --quad                          quad dataloader
-  --label-smoothing FLOAT         Label smoothing epsilon  [default: 0.0]
-  --upload_dataset                Upload dataset as W&B artifact table
-  --bbox_interval INTEGER         Set bounding-box image logging interval for
-                                  W&B  [default: -1]
-  --save_period INTEGER           Log model after every "save_period" epoch
-                                  [default: -1]
-  --artifact_alias TEXT           version of dataset artifact to be used
-                                  [default: latest]
-  --freeze INTEGER                Freeze layers: backbone of yolov7=50,
-                                  first3=0 1 2  [default: 0]
-  --v5-metric                     assume maximum recall as 1.0 in AP
-                                  calculation
-  --single-backbone               train single backbone model
-  --linear-lr                     linear LR
-  --help                          Show this message and exit.
-```
-
-TODO: more details...
-Example
-```
-partinet train step1 --cfg partinet/DynamicDet/cfg/dy-yolov7-step1.yaml --weight '' --data path/to/cryo_training.yaml --hyp partinet/DynamicDet/hyp/hyp.scratch.p5.yaml --name train_step1 --save_period 10 --epochs 20 --batch-size 16 --img-size 640 640 --workers 16 --device 0,1,2,3 --sync-bn
-
-```
-#### Training Step 2
-
-Like step1, training args are passed to `train`, but no special arguments are passed to the `step2`
-subsubcommand.
-
-```output
-Usage: partinet train step2 [OPTIONS]
-
-Options:
-  --backbone-detector [yolov7|yolov7-w6|yolov7x]
-                                  The choice of backbone to be used.
-                                  [default: yolov7]
-  --weight TEXT                   initial weights path  [required]
-  --data TEXT                     data.yaml path  [default: data/coco.yaml]
-  --hyp [scratch.p5|scratch.p6|finetune.dynamic.adam]
-                                  hyperparameters path  [default: scratch.p5]
-  --epochs INTEGER                [default: 300]
-  --batch-size INTEGER            total batch size for all GPUs  [default: 16]
-  --img-size INTEGER...           [train, test] image sizes  [default: 640,
-                                  640]
-  --rect                          rectangular training
-  --resume                        resume most recent training
-  --resume-ckpt TEXT              checkpoint to resume from
-  --nosave                        only save final checkpoint
-  --notest                        only test final epoch
-  --noautoanchor                  disable autoanchor check
-  --bucket TEXT                   gsutil bucket
-  --cache-images                  cache images for faster training
-  --image-weights                 use weighted image selection for training
-  --device TEXT                   cuda device, i.e. 0 or 0,1,2,3 or cpu
-  --multi-scale                   vary img-size +/- 50%%
-  --single-cls                    train multi-class data as single-class
-  --adam                          use torch.optim.Adam() optimizer
-  --sync-bn                       use SyncBatchNorm, only available in DDP
-                                  mode
-  --local_rank INTEGER            DDP parameter, do not modify  [default: -1]
-  --workers INTEGER               maximum number of dataloader workers
-                                  [default: 8]
-  --project TEXT                  save to project/name  [default: runs/train]
-  --entity TEXT                   W&B entity
-  --name TEXT                     save to project/name  [default: exp]
-  --exist-ok                      existing project/name ok, do not increment
-  --quad                          quad dataloader
-  --label-smoothing FLOAT         Label smoothing epsilon  [default: 0.0]
-  --upload_dataset                Upload dataset as W&B artifact table
-  --bbox_interval INTEGER         Set bounding-box image logging interval for
-                                  W&B  [default: -1]
-  --save_period INTEGER           Log model after every "save_period" epoch
-                                  [default: -1]
-  --artifact_alias TEXT           version of dataset artifact to be used
-                                  [default: latest]
-  --freeze INTEGER                Freeze layers: backbone of yolov7=50,
-                                  first3=0 1 2  [default: 0]
-  --v5-metric                     assume maximum recall as 1.0 in AP
-                                  calculation
-  --help                          Show this message and exit.
-```
-
-TODO: more details...
-Example
-```bash
-partinet train step2 --backbone-detector yolov7 --weight /path/to/runs/train/train-step1-300epochs/weights/last.pt --workers 4 --device 0 --batch-size 1 --epochs 10 --img-size 640 640  --adam --data /path/to/cryo_training_all.yaml --hyp finetune.dynamic.adam --name train_step2
-```
-## Detection
-
-```bash
-partinet detect --help
-```
-```
-Options:
-  --backbone-detector [yolov7|yolov7-w6|yolov7x]
-                                  The choice of backbone to be used.
-                                  [default: yolov7]
-  --weight TEXT                   model.pt path(s)  [required]
-  --source TEXT                   source  [default: inference/images]
-  --num-classes INTEGER           number of classes  [default: 80]
-  --img-size INTEGER              inference size (pixels)  [default: 640]
-  --conf-thres FLOAT              object confidence threshold  [default: 0.25]
-  --iou-thres FLOAT               IOU threshold for NMS  [default: 0.45]
-  --device TEXT                   cuda device, i.e. 0 or 0,1,2,3 or cpu
-  --view-img                      display results
-  --save-txt                      save results to *.txt
-  --save-conf                     save confidences in --save-txt labels
-  --nosave                        do not save images/videos
-  --classes INTEGER               filter by class: --classes 0, or --classes 0
-                                  --classes 2 --classes 3
-  --agnostic-nms                  class-agnostic NMS
-  --augment                       augmented inference
-  --project TEXT                  save results to project/name  [default:
-                                  runs/detect]
-  --name TEXT                     save results to project/name  [default: exp]
-  --exist-ok                      existing project/name ok, do not increment
-  --dy-thres FLOAT                dynamic thres  [default: 0.5]
-  --help                          Show this message and exit.
-```
-
-TODO: more details...
-
-## Testing
-
-```bash
-partinet test --help
-```
-```
-Usage: partinet test [OPTIONS]
-
-Options:
-  --backbone-detector [yolov7|yolov7-w6|yolov7x]
-                                  The choice of backbone to be used.
-                                  [default: yolov7]
-  --weight TEXT                   model.pt path(s)  [required]
-  --data TEXT                     data.yaml path  [default: data/coco.yaml]
-  --batch-size INTEGER            total batch size for all GPUs  [default: 1]
-  --img-size INTEGER              validation image size (pixels)  [default:
-                                  640]
-  --conf-thres FLOAT              object confidence threshold  [default:
-                                  0.001]
-  --iou-thres FLOAT               IOU threshold for NMS  [default: 0.65]
-  --task [train|val|test]         train, val, test, speed or study  [default:
-                                  test]
-  --device TEXT                   cuda device, i.e. 0 or 0,1,2,3 or cpu
-  --single-cls                    train multi-class data as single-class
-  --augment                       augmented inference
-  --verbose                       report mAP by class
-  --save-txt                      save results to *.txt
-  --save-hybrid                   save label+prediction hybrid results to
-                                  *.txt
-  --save-conf                     save confidences in --save-txt labels
-  --save-json                     save a cocoapi-compatible JSON results file
-  --project TEXT                  save to project/name  [default: runs/test]
-  --name TEXT                     save to project/name  [default: exp]
-  --exist-ok                      existing project/name ok, do not increment
-  --v5-metric                     assume maximum recall as 1.0 in AP
-                                  calculation
-  --dy-thres FLOAT                dynamic thres  [default: 0.5]
-  --save-results                  save results
-  --help                          Show this message and exit.
-```
-
-TODO: more details...
-
-## Get the container
-
-Replace `partinet <subcommand> <args>` with one of the below:
-
-### Docker
-
-```bash
-docker run ghcr.io/wehi-researchcomputing/partinet:latest <subcommand> <args>
-```
-
-### Singularity/Apptainer
-
-```bash
-singularity run oras://ghcr.io/wehi-researchcomputing/partinet:latest <subcommand> <args>
-```
+For issues and questions:
+- Open an [Issue](https://github.com/WEHI-ResearchComputing/PartiNet/issues)
+- Check existing [Discussions](https://github.com/WEHI-ResearchComputing/PartiNet/discussions)
