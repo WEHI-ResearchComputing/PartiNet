@@ -24,7 +24,6 @@ Before starting, ensure you have:
 ```bash
 git clone git@github.com:WEHI-ResearchComputing/PartiNet.git
 cd PartiNet
-pip install .
 ```
 
 Alternatively, use our containers:
