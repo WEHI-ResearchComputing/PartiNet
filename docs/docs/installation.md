@@ -12,6 +12,8 @@ PartiNet can be installed using several methods. Choose the option that best fit
 - CUDA-compatible GPU (recommended for optimal performance)
 - Git (for source installation)
 
+_Please note that AMD/Intel GPUs have not been tested, but may still used with PartiNet_
+
 ## Method 1: Install from Source (Recommended)
 
 This method gives you the latest version and full control over the installation:
@@ -84,6 +86,9 @@ PartiNet is designed to leverage GPU acceleration for optimal performance. Ensur
 - NVIDIA GPU with CUDA compute capability 3.5+ (e.g., NVIDIA A30, A100, H100)
 - CUDA drivers installed
 - For containers: nvidia-docker (Docker) or `--nv` flag (Apptainer)
+
+_AMD and Intel GPUs have not been tested and may not support full PartiNet functionality_
+
 
 ## Model Weights
 PartiNet model weights are available on [HuggingFace](https://huggingface.co/MihinP/PartiNet).
