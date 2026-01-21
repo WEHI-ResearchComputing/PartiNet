@@ -37,7 +37,9 @@ project_folder/
 
 ## Understanding Training Visualizations
 
-PartiNet generates several plots to help you evaluate model performance and training progress. Here's how to interpret each one:
+PartiNet generates several plots to help you evaluate model performance and training progress. You may find more in-depth guides of interpreting this data at https://neptune.ai/blog/f1-score-accuracy-roc-auc-pr-auc and https://docs.ultralytics.com/guides/yolo-performance-metrics/.
+
+Below is a quick guide for intepreting PartiNet training outputs:
 
 ### Performance Curves
 
@@ -84,10 +86,10 @@ PartiNet generates several plots to help you evaluate model performance and trai
 ### Batch Visualizations
 
 #### Training Batches (`train_batch*.jpg`)
-- Shows model predictions on training data
-- Green boxes: Ground truth particle positions
-- Red boxes: Model predictions
-- Look for: increasing alignment between predictions and ground truth
+- Shows model predictions on training data in a mosaic of image augmentations
+- Blue boxes: Ground truth particle positions
+- Look for:
+  - Correct bounding boxes around particles even after image augmentation
 
 #### Validation Results
 - `test_batch*_labels.jpg`: Ground truth annotations
@@ -107,14 +109,14 @@ tensorboard --logdir /data/your_project_folder
 
 Then open your browser to `http://localhost:6006` to view training metrics in real-time.
 
-**Incomplete training runs** (due to timeout or errors) will have fewer outputs - typically only configuration files, learning rate plots, and training batch visualizations. Validation plots and test predictions only appear when training completes successfully.
+**Incomplete training runs** (due to timeout or errors) will have fewer outputs - only configuration files, learning rate plots, and training batch visualizations. Validation plots and test predictions only appear when training completes successfully.
 
 ## Resuming Interrupted Training
 
 If training is interrupted due to timeout or out-of-memory errors, you can resume from the last checkpoint by pointing the `--weight` parameter to the `last.pt` file in your most recent experiment folder.
 
 :::info Which Checkpoint to Use?
-While `best.pt` typically represents the checkpoint with the best validation performance, **PartiNet's validation metrics continuously improve throughout training**. Therefore, we recommend using `last.pt` for inference and subsequent training steps, as it represents the most trained model.
+`best.pt` typically represents the checkpoint with the best validation performance, whereas `last.pt` contains weights for the last epoch, regardless of validation performance. **Overfitting of weights may occur with too many epochs of training**. This means `last.pt` may actually have worse performance than `best.pt`. It is important that you directly review validation performance during training to avoid this scenario
 :::
 
 :::tip Advanced Users

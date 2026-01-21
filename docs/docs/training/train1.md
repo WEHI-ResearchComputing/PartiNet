@@ -50,7 +50,7 @@ partinet train step1 \
 | `--workers` | 8 | Number of data loading workers. Adjust based on your CPU cores and I/O performance. |
 | `--device` | None | Specify GPU device (e.g., `0`, `1`, or `0,1` for multiple GPUs). If not specified, uses all available GPUs. |
 | `--batch` | 16 | Training batch size. If you encounter out-of-memory (OOM) errors, reduce this value (try 8 or 4). |
-| `--epochs` | 100 | Number of training epochs. More epochs may improve performance but increase training time. |
+| `--epochs` | 100 | Number of training epochs. More epochs may improve performance but increase training time. Overfitting may occur with too many epochs of training. It is important to [monitor validation metrics](training/training-output.md) during training |
 
 :::tip Training Recommendations
 - **Starting weights**: We strongly recommend using the supplied pre-trained weights as your starting point. This provides better initialization and typically results in faster training and improved final performance.
