@@ -143,7 +143,7 @@ Congratulations! You have prepared your micrographs for picking, you can now mov
 
 ### Custom CPU Configuration
 
-PartiNet automatically optimizes CPU usage for denoising:
+Number of CPUs used by PartiNet is controlled with `--num_workers`. These CPUs are automatically split between tasks to optimize for CPU utilization during denoising:
 
 - **Processing CPUs**: Half of available CPUs used for denoising
 - **I/O CPUs**: Remaining CPUs reserved for file operations
