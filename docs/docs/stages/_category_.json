@@ -1,0 +1,8 @@
+{
+  "label": "Picking",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "PartiNet processes cryo-EM micrographs through a carefully designed three-stage pipeline. Each stage builds upon the previous one, transforming raw motion-corrected micrographs into clean, accurately picked particle coordinates ready for downstream processing."
+  }
+}
