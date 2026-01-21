@@ -1,0 +1,8 @@
+{
+  "label": "Training",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "PartiNet models can be trained from scratch or from publically released weights to create fine-tuned picking models for your datasets"
+  }
+}

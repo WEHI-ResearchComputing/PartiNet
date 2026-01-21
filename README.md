@@ -1,86 +1,150 @@
-# PartiNet
-PartiNet is a particle-picking pipeline for cryo-EM micrographs. It provides denoising, adaptive detection, and STAR file generation for downstream processing.
+# PartiNet 🔬
 
-# Links
-- Documentation: https://mihinp.github.io/partinet_documentation/
-- Model weights (Hugging Face): https://huggingface.co/MihinP/PartiNet
+PartiNet is a three-stage pipeline for automated particle picking in cryo-EM micrographs, combining advanced denoising with state-of-the-art deep learning detection.
 
-# Getting started (quick)
-1. Clone the repository
 
-```powershell
+## Features
+
+- 🧹 Advanced denoising for improved signal-to-noise ratio
+- 🎯 Deep learning-based particle detection
+- ⚡ Multi-GPU support for faster processing
+- 🔄 Seamless integration with RELION workflows
+- 📊 Confidence-based particle filtering
+- 🖼️ Visual detection validation
+
+## Prerequisites
+
+Before starting, ensure you have:
+- Motion-corrected micrographs
+- GPU access (recommended)
+- PartiNet installation (see Installation section)
+
+## Installation
+
+```bash
 git clone git@github.com:WEHI-ResearchComputing/PartiNet.git
 cd PartiNet
 ```
 
-2. Create a Python virtual environment (recommended)
+Alternatively, use our containers:
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -U pip
+```bash
+# Docker
+docker run ghcr.io/wehi-researchcomputing/partinet:latest
+
+# Singularity/Apptainer
+singularity run oras://ghcr.io/wehi-researchcomputing/partinet:latest
 ```
 
-3. Install requirements
+## Directory Structure
 
-```powershell
-pip install -r requirements.txt
-# or editable install for development
-pip install -e .
+```
+project_directory/
+├── motion_corrected/          # 📁 Input micrographs
+├── denoised/                  # 🧹 Denoised outputs
+├── exp/                       # 🎯 Detection results
+│   ├── labels/               # 📋 Coordinates
+│   └── ...                   # 🖼️ Visualizations
+└── partinet_particles.star    # ⭐ Final output
 ```
 
-4. Download model weights (see Hugging Face README)
+## Pipeline Stages
 
-```powershell
-# If you have git-lfs and access via HTTPS/SSH
-git lfs install
-git clone https://huggingface.co/MihinP/PartiNet
-# or use the huggingface_hub python client
-python -m pip install huggingface_hub
-python - <<'PY'
-from huggingface_hub import hf_hub_download
-hf_hub_download(repo_id="MihinP/PartiNet", filename="best.pt", repo_type="model")
-PY
+### 1. Denoise
+```bash
+partinet denoise \
+  --source /data/my_project/motion_corrected \
+  --project /data/my_project
 ```
 
-# Quick usage examples
-
-- Denoise images
-
-```powershell
-partinet denoise --source /data/raw_micrographs --project /data/partinet_project
+### 2. Detect
+```bash
+partinet detect \
+  --weight /path/to/model_weights.pt \
+  --source /data/partinet_picking/denoised \
+  --device 0,1,2,3 \
+  --project /data/partinet_picking
 ```
 
-- Detect particles
-
-```powershell
-partinet detect --weight /path/to/best.pt --source /data/partinet_project/denoised --project /data/partinet_project
+### 3. Generate STAR File
+```bash
+partinet star \
+  --labels /data/my_project/exp/labels \
+  --images /data/my_project/denoised \
+  --output /data/my_project/partinet_particles.star \
+  --conf 0.1
 ```
 
-- Generate STAR files
+## Key Parameters
 
-```powershell
-partinet star --project /data/partinet_project --output /data/partinet_project/exp/particles.star
+### Detection
+- `--backbone-detector`: Choice of neural network architecture
+- `--weight`: Path to model weights
+- `--conf-thres`: Detection confidence threshold
+- `--iou-thres`: Overlap filtering threshold
+- `--device`: GPU device selection
+
+### STAR Generation
+- `--conf`: Confidence threshold for particle filtering
+- `--output`: Path for final STAR file
+
+## Output Files
+
+1. **Denoised Micrographs** (`denoised/*.mrc`)
+   - Cleaned micrographs with improved SNR
+
+2. **Detection Results** (`exp/`)
+   - `labels/*.txt`: Particle coordinates
+   - `*.png`: Visualization overlays
+
+3. **STAR File** (`partinet_particles.star`)
+   - Ready for RELION processing
+
+## Advanced Usage
+
+For detailed information about specific commands:
+
+```bash
+partinet --help
+partinet <command> --help
 ```
 
-# Containerized usage
+Available commands:
+- `denoise`: Clean input micrographs
+- `detect`: Identify particles
+- `star`: Generate STAR files
+- `train`: Train custom models (step1/step2)
+- `test`: Evaluate model performance
 
-- Docker
+## Troubleshooting
 
-```powershell
-docker run --gpus all -v /data:/data ghcr.io/wehi-researchcomputing/partinet:main partinet detect --weight /path/to/best.pt --source /data/denoised --project /data/partinet_project
+- **GPU Issues**
+  - Verify GPU availability: `nvidia-smi`
+  - Check CUDA installation
+  - Ensure proper device selection
+
+- **Path Issues**
+  - Verify directory permissions
+  - Check mount points in container setups
+  - Ensure absolute paths are used
+
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## License
+
+This project is licensed under the terms of the LICENSE file included in the repository.
+
+## Citation
+
+If you use PartiNet in your research, please cite:
+```
+Citation information will be added upon publication
 ```
 
-- Apptainer / Singularity
+## Support
 
-```powershell
-apptainer exec --nv --no-home -B /data oras://ghcr.io/wehi-researchcomputing/partinet:main-singularity partinet detect --weight /path/to/best.pt --source /data/denoised --project /data/partinet_project
-```
-
-# Development notes
-- Tests and CI: see `.github/workflows/` for CI pipelines.
-- Contributing: open issues and PRs on the main repo. Use the documentation site for user-facing docs and developer notes.
-
-
-# Support
-- For questions or issues, open an issue in the main repo: https://github.com/WEHI-ResearchComputing/PartiNet/issues
+For issues and questions:
+- Open an [Issue](https://github.com/WEHI-ResearchComputing/PartiNet/issues)
+- Check existing [Discussions](https://github.com/WEHI-ResearchComputing/PartiNet/discussions)
