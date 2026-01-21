@@ -2,13 +2,17 @@
 
 PartiNet is a three-stage pipeline for automated particle picking in cryo-EM micrographs, combining advanced denoising with state-of-the-art deep learning detection.
 
+Installation and Usage can be found at our [Documentation](https://wehi-researchcomputing.github.io/PartiNet/) 
+
+Use our pretrained model at [Model Weights](https://huggingface.co/MihinP/PartiNet)
+
 
 ## Features
 
-- 🧹 Advanced denoising for improved signal-to-noise ratio
-- 🎯 Deep learning-based particle detection
+- 🧹 Heuristic denoising for improved signal-to-noise ratio
+- 🎯 Dynamic deep learning particle detection
 - ⚡ Multi-GPU support for faster processing
-- 🔄 Seamless integration with RELION workflows
+- 🔄 Seamless integration with cryoSPARC and RELION workflows
 - 📊 Confidence-based particle filtering
 - 🖼️ Visual detection validation
 
@@ -27,13 +31,18 @@ cd PartiNet
 ```
 
 Alternatively, use our containers:
-
-```bash
-# Docker
-docker run ghcr.io/wehi-researchcomputing/partinet:latest
-
+```
 # Singularity/Apptainer
-singularity run oras://ghcr.io/wehi-researchcomputing/partinet:latest
+apptainer exec --nv --no-home \
+    -B /path/to/your/data:/data oras://ghcr.io/wehi-researchcomputing/partinet:main-singularity \
+    partinet --help
+```
+
+```
+# Docker
+docker pull ghcr.io/wehi-researchcomputing/partinet:main
+docker run --gpus all -v /path/to/your/data:/data \
+    ghcr.io/wehi-researchcomputing/partinet:main partinet --help
 ```
 
 ## Directory Structure
@@ -122,6 +131,7 @@ Available commands:
   - Verify GPU availability: `nvidia-smi`
   - Check CUDA installation
   - Ensure proper device selection
+  - AMD and Intel GPUs are currently untested
 
 - **Path Issues**
   - Verify directory permissions
@@ -130,11 +140,11 @@ Available commands:
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! Please raise issues or initiate pull requests on this repo.
 
 ## License
 
-This project is licensed under the terms of the LICENSE file included in the repository.
+This project is licensed under the terms of MIT license.
 
 ## Citation
 
