@@ -110,7 +110,8 @@ Available commands:
 - `detect`: Identify particles
 - `star`: Generate STAR files
 - `train`: Train custom models
-- 
+
+
 ## Troubleshooting
 
 - **GPU Issues**
