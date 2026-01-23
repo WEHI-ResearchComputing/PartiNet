@@ -84,22 +84,9 @@ partinet star \
   --conf 0.1
 ```
 
-## Key Parameters
-
-### Detection
-- `--backbone-detector`: Choice of neural network architecture
-- `--weight`: Path to model weights
-- `--conf-thres`: Detection confidence threshold
-- `--iou-thres`: Overlap filtering threshold
-- `--device`: GPU device selection
-
-### STAR Generation
-- `--conf`: Confidence threshold for particle filtering
-- `--output`: Path for final STAR file
-
 ## Output Files
 
-1. **Denoised Micrographs** (`denoised/*.mrc`)
+1. **Denoised Micrographs** (`denoised/*.png`)
    - Cleaned micrographs with improved SNR
 
 2. **Detection Results** (`exp/`)
@@ -122,9 +109,8 @@ Available commands:
 - `denoise`: Clean input micrographs
 - `detect`: Identify particles
 - `star`: Generate STAR files
-- `train`: Train custom models (step1/step2)
-- `test`: Evaluate model performance
-
+- `train`: Train custom models
+- 
 ## Troubleshooting
 
 - **GPU Issues**
