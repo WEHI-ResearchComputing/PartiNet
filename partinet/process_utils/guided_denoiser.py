@@ -20,6 +20,9 @@ def transform(image: np.ndarray) -> np.ndarray:
     """
     i_min = image.min()
     i_max = image.max()
+    if i_max == i_min:
+        # avoid division by zero; return a zero array when input is constant
+        return np.zeros_like(image, dtype=np.uint8)
     image = ((image - i_min) / (i_max - i_min)) * 255
     return image.astype(np.uint8)
 
@@ -28,12 +31,20 @@ def standard_scaler(image: np.ndarray) -> np.ndarray:
     """
     Apply Gaussian blur and standardize the image to have zero mean and unit variance.
 
+    The input is cast to ``float32`` before any OpenCV operations to avoid the
+    ``CV_16F`` kernel-type error that occurs when processing 16‑bit micrographs
+    (see issue #41). After blurring and normalization we transform the result to
+    eight‑bit for downstream filters.
+
     Args:
         image (np.ndarray): Input image array.
 
     Returns:
         np.ndarray: Scaled and transformed image.
     """
+    # convert to a supported floating point type for OpenCV kernels
+    image = image.astype(np.float32)
+
     kernel_size = 9
     image = cv2.GaussianBlur(image, (kernel_size, kernel_size), 0)
     mu = np.mean(image)
@@ -150,6 +161,12 @@ def denoise(image_path: str) -> np.ndarray:
     """
     kernel = gaussian_kernel(kernel_size=9)
     image = mrcfile.read(image_path)
+
+    # some MRCs are stored as 16‑bit integers; ensure we work in float32 so that
+    # subsequent OpenCV calls (GaussianBlur, etc.) don't raise the ktype error
+    # described in https://github.com/WEHI-ResearchComputing/PartiNet/issues/41
+    image = image.astype(np.float32)
+
     image = image.T
     image = np.rot90(image)
     normalized_image = standard_scaler(np.array(image))
