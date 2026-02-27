@@ -1,7 +1,7 @@
 import click
 import sys, os
 
-__version__ = "0.2.0"
+__version__ = "1.0.0"
 
 DYNAMICDET_AVAILABLE_MODELS = ["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6", "yolov7-e6e"]
 
