@@ -19,6 +19,7 @@ import torch.nn.functional as F
 from PIL import Image, ExifTags
 from torch.utils.data import Dataset
 from tqdm import tqdm
+import mrcfile  # support cryoEM micrograph format
 
 import pickle
 from copy import deepcopy
@@ -29,10 +30,14 @@ from torchvision.ops import roi_pool, roi_align, ps_roi_pool, ps_roi_align
 from partinet.DynamicDet.utils.general import check_requirements, xyxy2xywh, xywh2xyxy, xywhn2xyxy, xyn2xy, segment2box, segments2boxes, \
     resample_segments, clean_str
 from partinet.DynamicDet.utils.torch_utils import torch_distributed_zero_first
+from partinet.process_utils.guided_denoiser import transform
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
-img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo']  # acceptable image suffixes
+# acceptable image suffixes (extensions are compared case‑insensitively)
+# add 'mrc' so that LoadImages/LoadImagesAndLabels can see micrographs directly
+# micrographs are read with `mrcfile`; only uncompressed MRC files are supported
+img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng', 'webp', 'mpo', 'mrc']  
 vid_formats = ['mov', 'avi', 'mp4', 'mpg', 'mpeg', 'm4v', 'wmv', 'mkv']  # acceptable video suffixes
 logger = logging.getLogger(__name__)
 
@@ -137,6 +142,7 @@ class LoadImages:  # for inference
         else:
             raise Exception(f'ERROR: {p} does not exist')
 
+        # allow uncompressed .mrc files
         images = [x for x in files if x.split('.')[-1].lower() in img_formats]
         videos = [x for x in files if x.split('.')[-1].lower() in vid_formats]
         ni, nv = len(images), len(videos)
@@ -183,7 +189,15 @@ class LoadImages:  # for inference
         else:
             # Read image
             self.count += 1
-            img0 = cv2.imread(path)  # BGR
+            # support cryo-EM micrographs saved as MRC
+            if path.lower().endswith('.mrc'):
+                img_mrc = mrcfile.read(path)
+                img0 = transform(img_mrc).astype(np.uint8)
+                # `transform` returns a single-channel image; networks expect BGR
+                if img0.ndim == 2:
+                    img0 = cv2.cvtColor(img0, cv2.COLOR_GRAY2BGR)
+            else:
+                img0 = cv2.imread(path)  # BGR
             assert img0 is not None, 'Image Not Found ' + path
             #print(f'image {self.count}/{self.nf} {path}: ', end='')
 
@@ -668,7 +682,14 @@ def load_image(self, index):
     img = self.imgs[index]
     if img is None:  # not cached
         path = self.img_files[index]
-        img = cv2.imread(path)  # BGR
+        # support uncompressed mrc micrographs
+        if path.lower().endswith('.mrc'):
+            img_mrc = mrcfile.read(path)
+            img = transform(img_mrc).astype(np.uint8)
+            if img.ndim == 2:
+                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        else:
+            img = cv2.imread(path)  # BGR
         assert img is not None, 'Image Not Found ' + path
         h0, w0 = img.shape[:2]  # orig hw
         r = self.img_size / max(h0, w0)  # resize image to img_size

@@ -13,7 +13,7 @@ import torch.nn as nn
 
 import partinet.DynamicDet
 from partinet.DynamicDet.models.yolo import Model
-from partinet.DynamicDet.utils.datasets import create_dataloader
+from partinet.DynamicDet.utils.datasets import create_dataloader, LoadImages
 from partinet.DynamicDet.utils.general import coco80_to_coco91_class, check_dataset, check_file, check_img_size, \
     box_iou, non_max_suppression, scale_coords, xyxy2xywh, xywh2xyxy, set_logging, increment_path, colorstr
 from partinet.DynamicDet.utils.metrics import ap_per_class, ConfusionMatrix

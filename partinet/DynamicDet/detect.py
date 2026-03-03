@@ -41,6 +41,17 @@ logger.addHandler(fh)
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 
+# helper ----------------------------------------------------------------
+def _save_filename(p: Path) -> str:
+    """Return an output filename for image `p`.
+
+    Currently we cannot write `.mrc` files with OpenCV, so convert any
+    input with that suffix to PNG.  Other extensions are returned as-is.
+    """
+    if p.suffix.lower() == '.mrc':
+        return p.stem + '.png'
+    return p.name
+
 # --- Detection function ---
 def detect(opt, save_img=False):
     source, cfg, weight, view_img, save_txt, nc, imgsz = (
@@ -145,7 +156,8 @@ def detect(opt, save_img=False):
                     p, s, im0, f_idx = path, '', im0s, frame
 
                 p = Path(p)
-                save_path = str(save_dir / p.name)
+                # choose image-filename for saving; helper contains mrc logic
+                save_path = str(save_dir / _save_filename(p))
                 txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{f_idx}')
                 gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]
 
