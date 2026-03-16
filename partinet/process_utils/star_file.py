@@ -67,8 +67,8 @@ def main(labels_path: str, images_path: str, star_out_path: str, conf_thresh: fl
     all_rows = [row for result in results for row in result]
 
     # Write STAR file
-    with open(star_out_path, "w") as star_file:
-        star_writer = csv.writer(star_file, delimiter=' ')
+    with open(star_out_path, "w", newline="") as star_file:
+        star_writer = csv.writer(star_file, delimiter=" ", lineterminator="\n")
         star_writer.writerow([])
         star_writer.writerow(["data_"])
         star_writer.writerow([])
