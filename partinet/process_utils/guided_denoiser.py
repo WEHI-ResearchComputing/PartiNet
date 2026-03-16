@@ -167,8 +167,6 @@ def denoise(image_path: str) -> np.ndarray:
     # described in https://github.com/WEHI-ResearchComputing/PartiNet/issues/41
     image = image.astype(np.float32)
 
-    image = image.T
-    image = np.rot90(image)
     normalized_image = standard_scaler(np.array(image))
     contrast_enhanced_image = contrast_enhancement(normalized_image)
     weiner_filtered_image = wiener_filter(contrast_enhanced_image, kernel, K=30)
