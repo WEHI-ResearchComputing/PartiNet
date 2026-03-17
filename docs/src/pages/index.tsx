@@ -5,6 +5,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import Heading from '@theme/Heading';
+import partinetRMSD from '@site/static/img/partinet_RMSD.png';
 
 import styles from './index.module.css';
 
@@ -17,6 +18,11 @@ function HomepageHeader() {
           {siteConfig.title}
         </Heading>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
+        <img
+          src={partinetRMSD}
+          alt="PartiNet RMSD"
+          style={{ maxWidth: '100%', marginTop: '1rem' }}
+        />
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
@@ -33,8 +39,8 @@ export default function Home(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Description will go into a meta tag in <head />">
+      title={`PartiNet: high performance particle picking for cryo-EM`}
+      description="PartiNet is a high performance particle picking pipeline for cryo-electron microscopy (cryo-EM) that provides improved identification of rare particle views and up to 7× faster inference than existing tools.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

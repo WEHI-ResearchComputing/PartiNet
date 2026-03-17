@@ -81,11 +81,31 @@ Choose your confidence threshold based on:
 - Downstream processing requirements
 - Balance between particle quantity and quality
 
-## Output
+## CryoSPARC Output
 
-The command generates a STAR file containing:
+The command generates a STAR file compatible with CryoSPARC containing:
 - Particle coordinates (X, Y positions)
 - Corresponding micrograph paths
+
+## RELION output
+
+Use `--relion` and `--relion-project-dir` to generate RELION-compatible STAR outputs under `<relion_project>/partinet`:
+
+- Micrograph manifest: `<relion_project>/partinet/pick.star`
+- Per-micrograph coordinates: `<relion_project>/partinet/movies/<micrograph_basename>.star`
+
+Example:
+
+```bash
+partinet star \
+  --labels /data/partinet_picking/exp/labels \
+  --images /data/partinet_picking/denoised \
+  --output /data/partinet_picking/output.star \
+  --conf 0.2 \
+  --relion \
+  --relion-project-dir /data/relion/EMPIAR-10089 \
+  --mrc-prefix MotionCorr/job003/movies
+```
 
 
 ## Next Steps
@@ -96,8 +116,10 @@ After generating your STAR file, you can:
 
 :::warning
 
-PartiNet Denoise flips micrographs in the y-axis due to matrix transpose operations. If you denoised micrographs in PartiNet ensure that when you import and extract particle coordinates that you toggle `Flip in y` in CryoSPARC or similar in RELION prior to particle extraction.
+If you are using PartiNet v1.0.0, the Denoise flips micrographs in the y-axis due to matrix transpose operations. If you denoised micrographs in PartiNet ensure that when you import and extract particle coordinates that you toggle `Flip in y` in CryoSPARC prior to particle extraction. This has been fixed in v1.0.1+. You can check your version with `partinet --help`
 
 :::
+
+
 
 

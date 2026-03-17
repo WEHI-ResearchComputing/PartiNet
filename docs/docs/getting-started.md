@@ -20,23 +20,23 @@ PartiNet expects and creates the following directory structure:
 
 ```
 project_directory/
-├── motion_corrected/          # 📁 Your input micrographs
+├── motion_corrected/          # Your soft-linked input micrographs
 │   ├── micrograph1.mrc
 │   ├── micrograph2.mrc
 │   └── ...
-├── denoised/                  # 🧹 Created by denoise stage
+├── denoised/                  # Created by denoise stage
 │   ├── micrograph1.mrc
 │   ├── micrograph2.mrc
 │   └── ...
-├── exp/                       # 🎯 Created by detect stage
-│   ├── labels/               # 📋 Detection coordinates
+├── exp/                       # Created by detect stage
+│   ├── labels/               # Detection coordinates (YOLO format)
 │   │   ├── micrograph1.txt
 │   │   ├── micrograph2.txt
 │   │   └── ...
-│   ├── micrograph1.png    # 🖼️ Micrographs with detections drawn
+│   ├── micrograph1.png    # Micrographs with detections drawn
 │   ├── micrograph2.
 │   └── ...
-└── partinet_particles.star   # ⭐ Final STAR file (created by star stage)
+└── partinet_particles.star   # CryoSPARC-style STAR file (created by star stage)
 ```
 
 **Pipeline Flow:**

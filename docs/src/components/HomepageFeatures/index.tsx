@@ -24,7 +24,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_success_288d.svg').default,
     description: (
       <>
-        PartiNet proides improved identification of rare particle views allowing for comprehensive map reconstruction.
+        PartiNet provides improved identification of rare particle views allowing for comprehensive map reconstruction.
       </>
     ),
   },
@@ -33,7 +33,7 @@ const FeatureList: FeatureItem[] = [
     Svg: require('@site/static/img/undraw_space-exploration_dhu1.svg').default,
     description: (
       <>
-        PartiNet provides up to 10× faster inference than existing tools enabling real-time, on-the-fly picking. 
+        PartiNet provides up to 7× faster inference than existing tools enabling real-time, on-the-fly picking. 
       </>
     ),
   },

@@ -32,7 +32,7 @@ The final stage prepares particle data for further processing and provides repor
 PartiNet is ideal for:
 - Identifying rare views
 - Picking on heterogeneous datasets
-- Reporting on particle populations
+- High speed picking
 
 ## Next Steps
 
@@ -40,9 +40,6 @@ PartiNet is ideal for:
 - **Ready to begin?** Follow our [Getting Started](getting-started.md) guide for your first analysis
 - **Need specific details?** Check the individual stage documentation: [Denoise](stages/denoise.md), [Detect](stages/detect.md), [Star](stages/star.md)
 
-<!-- ## Getting Help
+## Getting Help
 
-If you encounter issues or need assistance:
-- Check the [Troubleshooting](reference/troubleshooting.md) guide
-- Review the complete [CLI Reference](reference/cli-reference.md)
-- Look at our [Examples](examples/) for common use cases -->
+If you encounter issues or need assistance please raise an issue on the GitHub

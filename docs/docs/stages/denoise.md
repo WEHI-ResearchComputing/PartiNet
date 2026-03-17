@@ -69,16 +69,16 @@ mkdir motion_corrected
 **From CryoSPARC:**
 ```shell
 # Using symbolic links (faster, saves space)
-ln -s /path/to/cryosparc/project/job_number/motioncorrected/*_fractions_patch_aligned.mrc motion_corrected/
+ln -s /path/to/cryosparc/project/JXXX/motioncorrected/*_fractions_patch_aligned.mrc motion_corrected/
 
 # Using rsync (copies files)
-rsync /path/to/cryosparc/project/job_number/motioncorrected/*_fractions_patch_aligned.mrc motion_corrected/
+rsync /path/to/cryosparc/project/JXXX/motioncorrected/*_fractions_patch_aligned.mrc motion_corrected/
 ```
 
 **From RELION:**
 ```shell
 # Link motion-corrected micrographs
-ln -s /path/to/relion/project/MotionCorr/job_number/Micrographs/*.mrc motion_corrected/
+ln -s /path/to/relion/project/MotionCorr/jobXXX/*.mrc motion_corrected/
 ```
 
 ### 3. Run Denoising
@@ -166,7 +166,7 @@ partinet denoise \
 
 
 ### Different Output Formats
-By default PartiNet outputs denoised images in `png` format. This is necessary for compatibility with the detection architecture. `png` is a lossless compression, however micrographs are normalised from 32 bit depth `mrc` files to 8 bit `png`. `jpg` is also available (eg for making figures) but is not recommended for use due to lossy compression.
+By default PartiNet outputs denoised images in `png` format. This is necessary for compatibility with the detection architecture. `png` is a lossless compression, however micrographs are normalised from 32 bit depth `mrc` files to 8 bit `png`. `jpg` is also available (as a legacy format) but is not recommended for use due to lossy compression.
 
 ```shell
 # JPEG format (smaller file size, lossy compression)
