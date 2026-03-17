@@ -18,4 +18,4 @@ from: python:3.9.19-slim-bookworm
 %labels
   AUTHORS Mihin Perera, Edward Yang, Julie Iskander
   MAINTAINERS Mihin Perera, Edward Yang, Julie Iskander
-  VERSION v1.0.0
+  VERSION v1.0.1

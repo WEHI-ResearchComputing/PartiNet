@@ -1,7 +1,7 @@
 import click
 import sys, os
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 DYNAMICDET_AVAILABLE_MODELS = ["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6", "yolov7-e6e"]
 
@@ -77,12 +77,23 @@ def split(star, images, output, class_id, test_size, split_only):
 @main.command()
 @click.option("--labels", type=str, required=True, help="Path to the labels directory")
 @click.option("--images", type=str, required=True, help="Path to the images directory")
-@click.option("--output", type=str, required=True, help="Path to the output STAR file")
+@click.option("--output", type=str, required=True, help="Path to the output STAR file (CryoSPARC style)")
 @click.option("--conf", type=float, default=0.1, help="Minimum confidence threshold from predictions")
-def star(labels, images, output,conf):
+@click.option("--relion", is_flag=True, default=False, help="Also generate RELION pick.star + per-micrograph star files")
+@click.option("--relion-project-dir", type=str, default=None, help="RELION project root (creates <project>/partinet/pick.star and <project>/partinet/movies/*.star)")
+@click.option("--mrc-prefix", type=str, default="", help="Prefix path for micrograph names in RELION pick.star (e.g. MotionCorr/job003/movies)")
+def star(labels, images, output, conf, relion, relion_project_dir, mrc_prefix):
     click.echo("Generating STAR file...")
     import partinet.process_utils.star_file
-    partinet.process_utils.star_file.main(labels,images,output,conf)
+    partinet.process_utils.star_file.main(
+        labels,
+        images,
+        output,
+        conf,
+        relion=relion,
+        relion_project_dir=relion_project_dir,
+        mrc_prefix=mrc_prefix,
+    )
 
 @main.command()
 @click.option("--source", type=str, required=True, help="Path to Raw micrographs")

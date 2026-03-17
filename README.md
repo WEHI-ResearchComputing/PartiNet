@@ -1,4 +1,6 @@
-# PartiNet 🔬
+# PartiNet 
+
+![PartiNet RMSD](docs/static/img/partinet_RMSD.png)
 
 PartiNet is a three-stage pipeline for automated particle picking in cryo-EM micrographs, combining advanced denoising with state-of-the-art deep learning detection.
 
@@ -9,12 +11,12 @@ Use our pretrained model at [Model Weights](https://huggingface.co/MihinP/PartiN
 
 ## Features
 
-- 🧹 Heuristic denoising for improved signal-to-noise ratio
-- 🎯 Dynamic deep learning particle detection
-- ⚡ Multi-GPU support for faster processing
-- 🔄 Seamless integration with cryoSPARC and RELION workflows
-- 📊 Confidence-based particle filtering
-- 🖼️ Visual detection validation
+- Heuristic denoising for improved signal-to-noise ratio
+- Dynamic deep learning particle detection
+- Multi-GPU support for faster processing
+- Seamless integration with cryoSPARC and RELION workflows
+- Confidence-based particle filtering
+- Visual detection validation
 
 ## Prerequisites
 
@@ -49,12 +51,12 @@ docker run --gpus all -v /path/to/your/data:/data \
 
 ```
 project_directory/
-├── motion_corrected/          # 📁 Input micrographs
-├── denoised/                  # 🧹 Denoised outputs
-├── exp/                       # 🎯 Detection results
-│   ├── labels/               # 📋 Coordinates
-│   └── ...                   # 🖼️ Visualizations
-└── partinet_particles.star    # ⭐ Final output
+├── motion_corrected/          # Input micrographs
+├── denoised/                  # Denoised outputs
+├── exp/                       # Detection results
+│   ├── labels/               # Coordinates
+│   └── ...                   # Visualizations
+└── partinet_particles.star    # Final output
 ```
 
 ## Pipeline Stages
@@ -94,7 +96,8 @@ partinet star \
    - `*.png`: Visualization overlays
 
 3. **STAR File** (`partinet_particles.star`)
-   - Ready for RELION processing
+   - Ready for CryoSPARC processing
+   - Additional commands available for RELION compatible output
 
 ## Advanced Usage
 
@@ -145,3 +148,5 @@ Citation information will be added upon publication
 For issues and questions:
 - Open an [Issue](https://github.com/WEHI-ResearchComputing/PartiNet/issues)
 - Check existing [Discussions](https://github.com/WEHI-ResearchComputing/PartiNet/discussions)
+
+
