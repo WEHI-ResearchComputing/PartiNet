@@ -41,10 +41,12 @@ dependencies = [
   "scikit-learn",
   "mrcfile",
   "pytest",
+  "gradio",
 ]
 
 [project.scripts]
 partinet = "partinet:main"
+partinet-gui = "partinet.gui:launch_gui"
 
 [build-system]
 requires = ["setuptools", "Click"]
@@ -55,7 +57,7 @@ where = ["."]
 include = ["partinet*"]
 
 [tool.setuptools.package-data]
-"*" = ["dy-*.yaml", "hyp.*.yaml"]
+"partinet" = ["dy-*.yaml", "hyp.*.yaml"]
 
 [tool.setuptools.dynamic]
 version = {attr = "partinet.__version__"}
