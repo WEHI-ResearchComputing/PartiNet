@@ -92,14 +92,16 @@ def main(source_dir: str, project_dir: str, ncpu: int, img_format: str) -> None:
         - Logging is configured to write messages to a log file and the console.
         - Ensures at least one CPU is used for processing.
     """
-    # Configure logging
-    logging.basicConfig(filename="partinet_denoise.log", level=logging.INFO, format='%(asctime)s - %(message)s')
-    logging.getLogger().addHandler(logging.StreamHandler())
-
     # Prepare output directory and log file
     denoise_dir = os.path.join(project_dir, "denoised")
-    logger_name = project_dir + "/partinet_denoise.log"
-    logging.basicConfig(filename=logger_name, level=logging.INFO, format='%(asctime)s - %(message)s')
+    log_path = os.path.join(project_dir, "partinet_denoise.log")
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    fmt = logging.Formatter('%(asctime)s - %(message)s')
+    fh = logging.FileHandler(log_path)
+    fh.setFormatter(fmt)
+    root_logger.addHandler(fh)
+    root_logger.addHandler(logging.StreamHandler())
 
     # Determine number of available CPUs
     max_available_cpus = multiprocessing.cpu_count()
