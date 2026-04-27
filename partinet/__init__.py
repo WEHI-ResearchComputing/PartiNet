@@ -1,5 +1,5 @@
 import click
-import sys, os
+import sys
 
 __version__ = "1.0.1"
 
@@ -104,6 +104,15 @@ def denoise(source, project, num_workers,img_format):
     click.echo("Denoising micrographs...")
     import partinet.process_utils.pooled_denoise_proc
     partinet.process_utils.pooled_denoise_proc.main(source,project,num_workers,img_format)
+
+@main.command()
+@click.option('--host', default='0.0.0.0', show_default=True, help='Host to bind the GUI server to')
+@click.option('--port', default=7860, show_default=True, help='Port to run the GUI on')
+@click.option('--share', is_flag=True, help='Create a public Gradio share link')
+def gui(host, port, share):
+    """Launch the PartiNet Gradio GUI."""
+    from partinet.gui import launch_gui
+    launch_gui(host=host, port=port, share=share)
 
 
 @main.group()
