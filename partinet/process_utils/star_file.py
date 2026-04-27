@@ -1,3 +1,4 @@
+import logging
 import math
 import os
 import pandas as pd
@@ -6,6 +7,8 @@ import cv2
 import argparse
 from typing import List, Dict, Tuple, Optional
 from multiprocessing import Pool, cpu_count
+
+logger = logging.getLogger(__name__)
 
 def yolo_to_starfile(yolo_coords: Dict[str, float], image_width: int, image_height: int, diameters: List[int]) -> Tuple[int, int, int]:
     x_center = math.ceil(yolo_coords["x_centre"] * image_width)
@@ -107,11 +110,11 @@ def main(labels_path: str, images_path: str, star_out_path: str, conf_thresh: fl
 
     all_rows = [row for result in results for row in result]
     if not all_rows:
-        print("No particle rows produced.")
+        logger.info("No particle rows produced.")
         return
 
     write_cryosparc_star(all_rows, star_out_path)
-    print(f"Wrote cryosparc-compatible star to: {star_out_path}")
+    logger.info(f"Wrote CryoSPARC-compatible STAR file to: {star_out_path}")
 
     if relion:
         if relion_project_dir is None:
@@ -121,8 +124,8 @@ def main(labels_path: str, images_path: str, star_out_path: str, conf_thresh: fl
         relion_coorddir = os.path.join(relion_partinet, "movies")
         os.makedirs(relion_coorddir, exist_ok=True)
         relion_write(all_rows, relion_pickstar, relion_coorddir, mrc_prefix)
-        print(f"Wrote relion pick.star: {relion_pickstar}")
-        print(f"Wrote relion per-micrograph stars under: {relion_coorddir}")
+        logger.info(f"Wrote RELION pick.star: {relion_pickstar}")
+        logger.info(f"Wrote RELION per-micrograph stars under: {relion_coorddir}")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate STAR files from YOLO labels (CryoSPARC and optional RELION)")
