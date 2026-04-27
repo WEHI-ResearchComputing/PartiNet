@@ -164,3 +164,9 @@ cython_debug/
 
 # DynamicDet run files
 runs
+gui/.venv/
+partinet-env/
+
+# Container images and scratch shell scripts
+*.sif
+*.sh
