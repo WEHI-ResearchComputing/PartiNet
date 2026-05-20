@@ -6,6 +6,14 @@ sidebar_position: 3
 
 This guide walks you through your first PartiNet analysis using the three-stage pipeline. We'll process cryo-EM micrographs from start to finish.
 
+:::tip New to PartiNet?
+The **[GUI](gui.md)** is the easiest way to get started — no command-line experience needed. Launch it with `partinet gui` and run all three stages from your browser.
+
+![PartiNet GUI overview](/img/gui_overview.png)
+
+The CLI walkthrough below is for users who prefer scripting, are working in containers, or need to run PartiNet on an HPC cluster.
+:::
+
 ## Prerequisites
 
 Before starting, ensure you have:
