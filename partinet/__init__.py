@@ -107,7 +107,7 @@ def denoise(source, project, num_workers,img_format):
 
 @main.command()
 @click.option('--host', default='0.0.0.0', show_default=True, help='Host to bind the GUI server to')
-@click.option('--port', default=7860, show_default=True, help='Port to run the GUI on')
+@click.option('--port', default=None, type=int, help='Port to run the GUI on (default: auto-select)')
 @click.option('--share', is_flag=True, help='Create a public Gradio share link')
 def gui(host, port, share):
     """Launch the PartiNet Gradio GUI."""

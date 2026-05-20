@@ -11,6 +11,37 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import gradio as gr
 
+# ── Branding ──────────────────────────────────────────────────────────────────
+
+_PARTINET_PURPLE = gr.themes.Color(
+    c50="#f9f0fb",
+    c100="#f1dff6",
+    c200="#e4bfee",
+    c300="#d499e4",
+    c400="#c06fd7",
+    c500="#a94bc8",
+    c600="#8e32aa",
+    c700="#772d8b",
+    c800="#5f2470",
+    c900="#4a1c58",
+    c950="#2d0f36",
+)
+
+_THEME = gr.themes.Soft(
+    primary_hue=_PARTINET_PURPLE,
+    secondary_hue=_PARTINET_PURPLE,
+)
+
+_HEADER_HTML = """
+<div style="padding:8px 0 4px 0">
+  <div style="font-size:1.6rem;font-weight:700;line-height:1.1">PartiNet</div>
+  <div style="font-size:0.85rem;opacity:0.7">
+    Automated cryo-EM particle picker &nbsp;·&nbsp;
+    Run each stage in order: <b>1&nbsp;·&nbsp;Denoise → 2&nbsp;·&nbsp;Detect → 3&nbsp;·&nbsp;Star&nbsp;File</b>
+  </div>
+</div>
+"""
+
 
 # ── Log capture ──────────────────────────────────────────────────────────────
 
@@ -234,18 +265,18 @@ def _img_size(path):
 
 def load_detections(labels_dir, images_dir):
     labels_dir, images_dir = labels_dir.strip(), images_dir.strip()
-    _empty = (None, "", None, None, None, gr.update(choices=[]), "")
+    _err = lambda msg: (None, msg, None, None, None, None, gr.update(choices=[]), "")
 
     if not labels_dir or not images_dir:
-        return (None, "Both directories are required.", None, None, None, gr.update(choices=[]), "")
+        return _err("Both directories are required.")
     if not os.path.isdir(labels_dir):
-        return (None, f"Labels directory not found: `{labels_dir}`", None, None, None, gr.update(choices=[]), "")
+        return _err(f"Labels directory not found: `{labels_dir}`")
     if not os.path.isdir(images_dir):
-        return (None, f"Images directory not found: `{images_dir}`", None, None, None, gr.update(choices=[]), "")
+        return _err(f"Images directory not found: `{images_dir}`")
 
     label_files = sorted(f for f in os.listdir(labels_dir) if f.endswith(".txt"))
     if not label_files:
-        return (None, "No .txt label files found in labels directory.", None, None, None, gr.update(choices=[]), "")
+        return _err("No .txt label files found in labels directory.")
 
     mics, all_confs, all_sizes = [], [], []
     for lf in label_files:
@@ -265,7 +296,7 @@ def load_detections(labels_dir, images_dir):
         mics.append({"name": stem, "img": img_path, "w": w, "h": h, "dets": dets})
 
     if not mics:
-        return (None, "No label files had matching images in the images directory.", None, None, None, gr.update(choices=[]), "")
+        return (None, "No label files had matching images in the images directory.", None, None, None, None, gr.update(choices=[]), "")
 
     state = {"mics": mics, "confs": all_confs, "sizes": all_sizes}
     n, m = len(all_confs), len(mics)
@@ -282,7 +313,8 @@ def load_detections(labels_dir, images_dir):
         state, summary,
         _conf_plot(all_confs, DEFAULT),
         _size_plot(all_sizes),
-        _count_plot(mics, DEFAULT),
+        _mic_count_plot(mics, DEFAULT),
+        _bivariate_plot(all_confs, all_sizes),
         gr.update(choices=choices, value=choices[0]),
         _retained_text(all_confs, DEFAULT),
     )
@@ -310,13 +342,24 @@ def _size_plot(sizes_px):
     return fig
 
 
-def _count_plot(mics, threshold):
+def _mic_count_plot(mics, threshold):
     counts = [sum(1 for d in m["dets"] if d["conf"] >= threshold) for m in mics]
     fig, ax = plt.subplots(figsize=(9, 3))
-    ax.hist(counts, bins=max(1, min(40, len(set(counts)))), color="mediumseagreen", edgecolor="white", linewidth=0.5)
-    ax.set_xlabel("Particles per micrograph")
-    ax.set_ylabel("Micrographs")
-    ax.set_title(f"Particle count distribution  (threshold = {threshold:.2f})")
+    ax.bar(range(len(counts)), counts, color="mediumseagreen", width=1.0, linewidth=0)
+    ax.set_xlabel("Micrograph index")
+    ax.set_ylabel("Particles")
+    ax.set_title(f"Particles per micrograph  (threshold = {threshold:.2f})")
+    fig.tight_layout()
+    return fig
+
+
+def _bivariate_plot(confs, sizes):
+    fig, ax = plt.subplots(figsize=(5, 3))
+    h = ax.hist2d(confs, sizes, bins=50, cmap="viridis")
+    fig.colorbar(h[3], ax=ax, label="Detections")
+    ax.set_xlabel("Confidence score")
+    ax.set_ylabel("Box size (px)")
+    ax.set_title("Confidence vs box size")
     fig.tight_layout()
     return fig
 
@@ -357,14 +400,14 @@ def update_threshold(state, threshold, mic_name):
         return "", None, None, None, ""
     retained = _retained_text(state["confs"], threshold)
     conf_fig = _conf_plot(state["confs"], threshold)
-    count_fig = _count_plot(state["mics"], threshold)
+    mic_count_fig = _mic_count_plot(state["mics"], threshold)
     img, mic_stats = None, ""
     if mic_name:
         mic = next((m for m in state["mics"] if m["name"] == mic_name), None)
         if mic:
             img, n = _draw_detections(mic, threshold)
             mic_stats = f"**{n}** particles shown"
-    return retained, conf_fig, count_fig, img, mic_stats
+    return retained, conf_fig, mic_count_fig, img, mic_stats
 
 
 def update_micrograph(state, mic_name, threshold):
@@ -379,33 +422,42 @@ def update_micrograph(state, mic_name, threshold):
 
 # ── Helpers for global project directory ─────────────────────────────────────
 
-def _latest_labels_dir(project_dir):
+def _find_labels_dirs(project_dir):
     import glob as _glob
+    p = (project_dir or "").strip()
+    if not p or not os.path.isdir(p):
+        return []
     exp_dirs = sorted(
-        [d for d in _glob.glob(os.path.join(project_dir, "exp*")) if os.path.isdir(d)],
+        [d for d in _glob.glob(os.path.join(p, "exp*")) if os.path.isdir(d)],
         key=os.path.getmtime,
         reverse=True,
     )
-    for d in exp_dirs:
-        candidate = os.path.join(d, "labels")
-        if os.path.isdir(candidate):
-            return candidate
-    return os.path.join(project_dir, "exp", "labels")
+    return [
+        os.path.join(d, "labels")
+        for d in exp_dirs
+        if os.path.isdir(os.path.join(d, "labels"))
+    ]
+
+
+def refresh_labels(project_dir):
+    dirs = _find_labels_dirs(project_dir)
+    return gr.update(choices=dirs, value=dirs[0] if dirs else "")
 
 
 def update_project_dir(project_dir):
     p = (project_dir or "").strip()
     if not p:
-        return ("",) * 6
+        return ("", "", "", gr.update(choices=[], value=""), "", "")
     denoised = os.path.join(p, "denoised")
-    labels = _latest_labels_dir(p) if os.path.isdir(p) else os.path.join(p, "exp", "labels")
+    dirs = _find_labels_dirs(p)
+    labels_val = dirs[0] if dirs else os.path.join(p, "exp", "labels")
     return (
-        p,                                  # d1_project
-        denoised,                           # d2_source
-        p,                                  # d2_project
-        labels,                             # d3_labels
-        denoised,                           # d3_images
-        os.path.join(p, "particles.star"),  # d3_output
+        p,                                          # d1_project
+        denoised,                                   # d2_source
+        p,                                          # d2_project
+        gr.update(choices=dirs, value=labels_val),  # d3_labels
+        denoised,                                   # d3_images
+        os.path.join(p, "particles.star"),          # d3_output
     )
 
 
@@ -413,11 +465,7 @@ def update_project_dir(project_dir):
 
 def build_app():
     with gr.Blocks(title="PartiNet") as app:
-        gr.Markdown(
-            "# PartiNet\n"
-            "Automated cryo-EM particle picker. "
-            "Run each stage in order: **1 · Denoise → 2 · Detect → 3 · Star File**."
-        )
+        gr.HTML(_HEADER_HTML)
 
         _testing_project = "/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/gui_testing"
         gr_project = gr.Textbox(
@@ -571,9 +619,11 @@ def build_app():
 
                 # --- Statistics ---
                 with gr.Row():
-                    d3_conf_plot = gr.Plot(format="png",label="Confidence distribution")
-                    d3_size_plot = gr.Plot(format="png",label="Box size distribution")
-                d3_count_plot = gr.Plot(format="png",label="Particles per micrograph")
+                    d3_conf_plot = gr.Plot(format="png", label="Confidence distribution")
+                    d3_size_plot = gr.Plot(format="png", label="Box size distribution")
+                with gr.Row():
+                    d3_mic_count_plot = gr.Plot(format="png", label="Particles per micrograph")
+                    d3_bivariate_plot = gr.Plot(format="png", label="Confidence vs box size")
 
                 # --- Threshold + preview ---
                 d3_thresh = gr.Slider(
@@ -619,12 +669,12 @@ def build_app():
                 d3_load_btn.click(
                     load_detections,
                     inputs=[d3_labels, d3_images],
-                    outputs=[d3_state, d3_summary, d3_conf_plot, d3_size_plot, d3_count_plot, d3_mic_select, d3_retained],
+                    outputs=[d3_state, d3_summary, d3_conf_plot, d3_size_plot, d3_mic_count_plot, d3_bivariate_plot, d3_mic_select, d3_retained],
                 )
                 d3_thresh.change(
                     update_threshold,
                     inputs=[d3_state, d3_thresh, d3_mic_select],
-                    outputs=[d3_retained, d3_conf_plot, d3_count_plot, d3_preview, d3_mic_stats],
+                    outputs=[d3_retained, d3_conf_plot, d3_mic_count_plot, d3_preview, d3_mic_stats],
                 )
                 d3_mic_select.change(
                     update_micrograph,
@@ -646,7 +696,7 @@ def build_app():
     return app
 
 
-def launch_gui(host="0.0.0.0", port=7860, share=False):
+def launch_gui(host="0.0.0.0", port=None, share=False):
     app = build_app()
     app.queue()
-    app.launch(server_name=host, server_port=port, share=share, theme=gr.themes.Soft(), ssr_mode=False)
+    app.launch(server_name=host, server_port=port, share=share, theme=_THEME, ssr_mode=False)
