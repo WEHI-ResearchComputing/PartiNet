@@ -8,9 +8,17 @@ PartiNet includes a browser-based graphical interface built with Gradio. It cove
 
 ![PartiNet GUI overview](/img/gui_overview.png)
 
+:::tip Recommended installation
+Run the GUI from a **local Python installation** ([Installation](installation.md) — pip, conda, or a virtualenv on your workstation or cluster login node). Apptainer/Singularity and Docker images are intended for the **CLI** pipeline on HPC; running `partinet gui` inside a container is possible but not recommended.
+
+For large-scale or automated processing, the CLI remains the recommended approach.
+
+A local install avoids extra bind-mount and cache setup (`--no-home`, Hugging Face theme cache), keeps Slurm tools (`sbatch`, `scancel`) on the host PATH, and makes SSH port forwarding straightforward. On HPC, use the GUI locally on the login node and submit compute-heavy work via **Slurm** 
+:::
+
 ## Launching the GUI
 
-```shell title="Local Installation"
+```shell title="Local Python installation"
 partinet gui
 ```
 
@@ -166,17 +174,9 @@ Click **Generate STAR File** to write a CryoSPARC-compatible `.star` file. The c
 
 **RELION output** is available under the optional accordion — enable it to also produce a `pick.star` and per-micrograph coordinate files in the RELION project directory format.
 
-## GUI vs CLI
 
-| | GUI | CLI |
-|---|---|---|
-| Audience | Beginners, interactive exploration | Experienced users, scripting, HPC |
-| Log output | Streamed live in the browser | Terminal / log file |
-| Threshold tuning | Interactive slider with live preview | Set once at run time |
-| Automation | Slurm submission from GUI | Fully scriptable |
-| HPC | Login-node GUI + Slurm batch jobs | Apptainer / Docker / modules |
 
-For large-scale or automated processing, the CLI remains the recommended approach.
+
 
 ## What's Next
 
