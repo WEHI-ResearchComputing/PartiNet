@@ -105,8 +105,30 @@ partinet detect \
 
 ### Supported Formats
 
-- **PNG files** (`.png`)
-- **JPEG files** (`.jpg`, `.jpeg`)
+**Standard workflow (recommended):**
+
+- **PNG files** (`.png`) from the Denoise stage — use with `denoised_micrographs.pt`
+
+**Skip-denoise workflow:**
+
+- **MRC files** (`.mrc`) motion-corrected micrographs — use with `raw_micrographs.pt`
+- Raw MRC inputs are per-micrograph min–max normalised to 8-bit before inference (not the same as EMAN2 or CryoSegNet display)
+
+### Skip denoise (raw MRC)
+
+If you want to pick directly on motion-corrected micrographs without denoising:
+
+```shell
+partinet detect \
+    --weight /path/to/raw_micrographs.pt \
+    --source /data/partinet_picking/motion_corrected \
+    --project /data/partinet_picking \
+    --device 0
+```
+
+Use `raw_micrographs.pt` only with raw MRC inputs. For denoised PNG, use `denoised_micrographs.pt`.
+
+When generating a STAR file after skip-denoise, set `--images` to the **same folder** used as detect `--source` (e.g. `motion_corrected/`, not `denoised/`).
 
 ### Directory Structure
 
@@ -133,16 +155,16 @@ partinet_picking/
 │   ├── micrograph2.mrc
 │   └── ...
 ├── denoised/                  # 🧹 Created by denoise stage
-│   ├── micrograph1.mrc
-│   ├── micrograph2.mrc
+│   ├── micrograph1.png
+│   ├── micrograph2.png
 │   └── ...
 ├── exp/                       # 🎯 Created by detect stage
 │   ├── labels/               # 📋 Detection coordinates
 │   │   ├── micrograph1.txt
 │   │   ├── micrograph2.txt
 │   │   └── ...
-│   ├── micrograph1.mrc       # 🖼️ Micrographs with detections drawn
-│   ├── micrograph2.mrc
+│   ├── micrograph1.png       # 🖼️ Micrographs with detections drawn
+│   ├── micrograph2.png
 │   └── ...
 └── partinet_detect.log
 ```
