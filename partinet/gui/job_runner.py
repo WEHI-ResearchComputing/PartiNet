@@ -17,6 +17,14 @@ from typing import Callable, Dict, Iterator, List, Optional
 
 import yaml
 
+from partinet.gui.job_registry import (
+    attach_local_pid,
+    attach_slurm_id,
+    complete_job,
+    is_cancelled,
+    register_job,
+)
+
 POLL_INTERVAL = 1.0
 _SLURM_TERMINAL = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "NODE_FAIL", "OUT_OF_MEMORY", "PREEMPTED"}
 
@@ -32,6 +40,13 @@ class SlurmOptions:
     extra_sbatch: str = ""
     preamble: str = ""
     partinet_cmd: str = "partinet"
+
+
+STAGE_SLURM_DEFAULTS: Dict[str, SlurmOptions] = {
+    "denoise": SlurmOptions(cpus="32", mem="100G"),
+    "detect": SlurmOptions(cpus="32", mem="100G", gpus="4"),
+    "star": SlurmOptions(cpus="16", mem="64G"),
+}
 
 
 @dataclass
@@ -69,6 +84,20 @@ def merge_slurm_options(base: SlurmOptions, override: SlurmOptions) -> SlurmOpti
     return SlurmOptions(**merged)
 
 
+def resolve_slurm_options(stage: str, ui: Optional[SlurmOptions]) -> SlurmOptions:
+    """Merge stage defaults, optional YAML config, then GUI overrides."""
+    stage_base = STAGE_SLURM_DEFAULTS.get(stage, SlurmOptions())
+    return merge_slurm_options(
+        merge_slurm_options(stage_base, load_slurm_defaults()),
+        ui or SlurmOptions(),
+    )
+
+
+def slurm_field_defaults(stage: str) -> tuple[str, str, str]:
+    opts = STAGE_SLURM_DEFAULTS.get(stage, SlurmOptions())
+    return opts.cpus, opts.gpus, opts.mem
+
+
 class _QueueHandler(logging.Handler):
     def __init__(self, q: queue.Queue):
         super().__init__()
@@ -87,7 +116,7 @@ def _tail_file(path: str, offset: int) -> tuple[str, int]:
         return chunk, fh.tell()
 
 
-def _stream_local_callable(spec: JobSpec) -> Iterator[str]:
+def _stream_local_callable(spec: JobSpec, job_key: str) -> Iterator[str]:
     fmt = logging.Formatter("%(asctime)s - %(message)s")
     log_q: queue.Queue = queue.Queue()
     handler = _QueueHandler(log_q)
@@ -115,6 +144,13 @@ def _stream_local_callable(spec: JobSpec) -> Iterator[str]:
     output = ""
     offset = 0
     while not result["done"]:
+        if is_cancelled(job_key):
+            output += "\n--- CANCELLED ---\n"
+            yield output
+            complete_job(job_key, "cancelled")
+            for name in spec.loggers:
+                logging.getLogger(name).removeHandler(handler)
+            return
         time.sleep(POLL_INTERVAL)
         while not log_q.empty():
             output += log_q.get_nowait()
@@ -134,12 +170,24 @@ def _stream_local_callable(spec: JobSpec) -> Iterator[str]:
 
     if result["error"]:
         output += f"\n--- FAILED ---\n{result['error']}"
+        complete_job(job_key, "failed")
     else:
         output += "\n--- Complete ---"
+        complete_job(job_key, "completed")
     yield output
 
 
-def _stream_local_subprocess(spec: JobSpec) -> Iterator[str]:
+def _kill_local_proc(proc: subprocess.Popen) -> None:
+    if proc.poll() is not None:
+        return
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
+def _stream_local_subprocess(spec: JobSpec, job_key: str) -> Iterator[str]:
     slurm = spec.slurm or SlurmOptions()
     cmd = list(spec.command)
     if slurm.partinet_cmd and slurm.partinet_cmd != "partinet":
@@ -154,26 +202,42 @@ def _stream_local_subprocess(spec: JobSpec) -> Iterator[str]:
         bufsize=1,
         env=env,
     )
+    attach_local_pid(job_key, proc)
     output = f"Running: {shlex.join(cmd)}\n"
     yield output
     assert proc.stdout is not None
-    while True:
-        line = proc.stdout.readline()
-        if line:
-            output += line
-            yield output
-        elif proc.poll() is not None:
-            break
+    try:
+        while True:
+            if is_cancelled(job_key):
+                _kill_local_proc(proc)
+                output += "\n--- CANCELLED ---\n"
+                yield output
+                complete_job(job_key, "cancelled")
+                return
+            line = proc.stdout.readline()
+            if line:
+                output += line
+                yield output
+            elif proc.poll() is not None:
+                break
+            else:
+                time.sleep(0.05)
+        remaining = proc.stdout.read()
+        if remaining:
+            output += remaining
+        if is_cancelled(job_key):
+            output += "\n--- CANCELLED ---\n"
+            complete_job(job_key, "cancelled")
+        elif proc.returncode != 0:
+            output += f"\n--- FAILED --- (exit code {proc.returncode})\n"
+            complete_job(job_key, "failed")
         else:
-            time.sleep(0.05)
-    remaining = proc.stdout.read()
-    if remaining:
-        output += remaining
-    if proc.returncode != 0:
-        output += f"\n--- FAILED --- (exit code {proc.returncode})\n"
-    else:
-        output += "\n--- Complete ---"
-    yield output
+            output += "\n--- Complete ---"
+            complete_job(job_key, "completed")
+        yield output
+    finally:
+        if proc.poll() is None:
+            _kill_local_proc(proc)
 
 
 def _jobs_dir(project_dir: str) -> str:
@@ -264,8 +328,8 @@ def _slurm_active(job_id: str) -> bool:
         return False
 
 
-def _stream_slurm(spec: JobSpec) -> Iterator[str]:
-    slurm = merge_slurm_options(load_slurm_defaults(), spec.slurm or SlurmOptions())
+def _stream_slurm(spec: JobSpec, job_key: str) -> Iterator[str]:
+    slurm = resolve_slurm_options(spec.stage, spec.slurm)
     script_path = _write_slurm_script(spec, slurm)
     slurm_out = script_path.replace(".sh", "_slurm.out")
     output = f"Submitting Slurm job\nScript: {script_path}\n"
@@ -278,19 +342,38 @@ def _stream_slurm(spec: JobSpec) -> Iterator[str]:
             check=True,
         )
     except FileNotFoundError:
+        complete_job(job_key, "failed")
         yield output + "\n--- FAILED ---\nsbatch not found on PATH\n"
         return
     except subprocess.CalledProcessError as exc:
+        complete_job(job_key, "failed")
         yield output + f"\n--- FAILED ---\n{exc.stderr or exc.stdout}\n"
         return
 
     job_id = proc.stdout.strip().split(";")[0].strip()
+    attach_slurm_id(job_key, job_id, script_path)
     output += f"Job ID: {job_id}\n"
     yield output
 
     log_offset = 0
     slurm_offset = 0
     while True:
+        if is_cancelled(job_key):
+            try:
+                subprocess.run(["scancel", job_id], capture_output=True, text=True, check=False)
+            except FileNotFoundError:
+                pass
+            chunk, log_offset = _tail_file(spec.log_path, log_offset)
+            if chunk:
+                output += chunk
+            chunk, slurm_offset = _tail_file(slurm_out, slurm_offset)
+            if chunk:
+                output += chunk
+            output += "\n--- CANCELLED ---\n"
+            yield output
+            complete_job(job_key, "cancelled")
+            return
+
         time.sleep(POLL_INTERVAL)
         chunk, log_offset = _tail_file(spec.log_path, log_offset)
         if chunk:
@@ -314,8 +397,13 @@ def _stream_slurm(spec: JobSpec) -> Iterator[str]:
                 output += chunk
             if state == "COMPLETED":
                 output += "\n--- Complete ---"
+                complete_job(job_key, "completed")
+            elif state == "CANCELLED":
+                output += "\n--- CANCELLED ---\n"
+                complete_job(job_key, "cancelled")
             else:
                 output += f"\n--- FAILED --- (Slurm state: {state})\n"
+                complete_job(job_key, "failed")
             yield output
             return
 
@@ -323,10 +411,12 @@ def _stream_slurm(spec: JobSpec) -> Iterator[str]:
 def stream_job(spec: JobSpec) -> Iterator[str]:
     """Run a job locally or via Slurm and yield growing log text."""
     mode = (spec.mode or "local").strip().lower()
+    record = register_job(spec, mode)
+    job_key = record.job_key
     if mode == "slurm":
-        yield from _stream_slurm(spec)
+        yield from _stream_slurm(spec, job_key)
         return
     if spec.run_fn is not None:
-        yield from _stream_local_callable(spec)
+        yield from _stream_local_callable(spec, job_key)
         return
-    yield from _stream_local_subprocess(spec)
+    yield from _stream_local_subprocess(spec, job_key)

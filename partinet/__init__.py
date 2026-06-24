@@ -106,7 +106,7 @@ def denoise(source, project, num_workers,img_format):
     partinet.process_utils.pooled_denoise_proc.main(source,project,num_workers,img_format)
 
 @main.command()
-@click.option('--host', default='0.0.0.0', show_default=True, help='Host to bind the GUI server to')
+@click.option('--host', default='127.0.0.1', show_default=True, help='Host to bind the GUI server to')
 @click.option('--port', default=None, type=int, help='Port to run the GUI on (default: auto-select)')
 @click.option('--share', is_flag=True, help='Create a public Gradio share link')
 def gui(host, port, share):

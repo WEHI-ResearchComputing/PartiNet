@@ -14,19 +14,25 @@ PartiNet includes a browser-based graphical interface built with Gradio. It cove
 partinet gui
 ```
 
-Gradio will automatically select a free port and print the URL to the terminal:
+Gradio will print the URL to the terminal. On a login node, use `127.0.0.1` or `localhost` — not `0.0.0.0`, which is only a bind address.
 
 ```
-Running on local URL: http://0.0.0.0:54321
+Running on local URL: http://127.0.0.1:7860
 ```
 
-Open that URL in your browser. If you are connecting over SSH, set up port forwarding for the printed port.
+Open that URL in your browser on the login node, or set up SSH port forwarding from your laptop:
+
+```shell
+ssh -L 7860:127.0.0.1:7860 user@login-node
+```
+
+Then open `http://localhost:7860` in your local browser.
 
 ### Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--host` | `0.0.0.0` | Host address to bind the server to |
+| `--host` | `127.0.0.1` | Host address to bind the server to |
 | `--port` | auto | Port to run the GUI on; auto-selects a free port if omitted |
 | `--share` | off | Create a temporary public Gradio link (useful for remote sharing) |
 
@@ -52,6 +58,30 @@ The **Project directory** field at the top of the GUI is set once and auto-fills
 | Star File → Output STAR file | `<project>/particles.star` |
 
 Individual fields remain editable if you need to override a path for a specific stage.
+
+## Running jobs
+
+Open the **Running jobs** accordion (below the project directory) to see active jobs submitted from the GUI for the current project. The table refreshes automatically every five seconds, or click **Refresh**.
+
+| Column | Description |
+|--------|-------------|
+| Stage | `denoise`, `detect`, or `star` |
+| Mode | `local` or `slurm` |
+| ID | Slurm job ID or local process ID |
+| Status | `running`, `pending`, etc. |
+| Started | UTC timestamp when the job was submitted |
+
+To cancel a job, select it from **Select job** and click **Cancel selected**. Local jobs are terminated; Slurm jobs receive `scancel`. Job metadata is stored in `<project>/.partinet_jobs/manifest.json` so Slurm jobs remain visible (and cancellable) after a browser refresh.
+
+Selecting a job in the dropdown shows its live log in **Job log** (refreshed every five seconds while selected). Logs are read from the stage log file (`partinet_denoise.log`, etc.) and, for Slurm jobs, the batch script output under `.partinet_jobs/`.
+
+Only jobs submitted from this GUI session for the current project directory are listed.
+
+## Appearance
+
+The GUI uses the [lone17/kotaemon](https://huggingface.co/spaces/lone17/kotaemon) Gradio theme and opens in **dark mode** by default (via `?__theme=dark` on first load). You can switch to light or system mode using Gradio’s theme toggle in the footer.
+
+The theme is downloaded from the Hugging Face Hub on first launch (requires network once; cached afterward). Star File statistics plots use a dark matplotlib style to match the UI.
 
 Optional environment variables at launch:
 

@@ -5,29 +5,35 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import gradio as gr
 
-from partinet.gui.job_runner import JobSpec, SlurmOptions, stream_job
+from partinet.gui.job_registry import cancel_job, jobs_dropdown_update, jobs_markdown, read_job_log
+from partinet.gui.job_runner import JobSpec, SlurmOptions, slurm_field_defaults, stream_job
 from partinet.process_utils.image_io import is_micrograph_file, micrograph_dimensions, load_micrograph_for_detect
 
 # ── Branding ──────────────────────────────────────────────────────────────────
 
-_PARTINET_PURPLE = gr.themes.Color(
-    c50="#f9f0fb",
-    c100="#f1dff6",
-    c200="#e4bfee",
-    c300="#d499e4",
-    c400="#c06fd7",
-    c500="#a94bc8",
-    c600="#8e32aa",
-    c700="#772d8b",
-    c800="#5f2470",
-    c900="#4a1c58",
-    c950="#2d0f36",
-)
+_THEME_NAME = "lone17/kotaemon"
 
-_THEME = gr.themes.Soft(
-    primary_hue=_PARTINET_PURPLE,
-    secondary_hue=_PARTINET_PURPLE,
-)
+_DEFAULT_DARK_HEAD = """
+<script>
+(function () {
+  var url = new URL(window.location.href);
+  if (url.searchParams.get("__theme") !== "dark") {
+    url.searchParams.set("__theme", "dark");
+    window.location.replace(url.toString());
+  }
+})();
+</script>
+"""
+
+
+def _resolve_theme():
+    try:
+        return gr.themes.Base.from_hub(_THEME_NAME)
+    except Exception:
+        return gr.themes.Default()
+
+
+_THEME = _resolve_theme()
 
 _HEADER_HTML = """
 <div style="padding:8px 0 4px 0">
@@ -264,46 +270,50 @@ def load_detections(labels_dir, images_dir):
 
 
 def _conf_plot(confs, threshold):
-    fig, ax = plt.subplots(figsize=(5, 3))
-    ax.hist(confs, bins=50, color="steelblue", edgecolor="white", linewidth=0.5)
-    ax.axvline(threshold, color="crimson", linestyle="--", linewidth=1.5, label=f"Threshold {threshold:.2f}")
-    ax.legend(fontsize=8)
-    ax.set_xlabel("Confidence score")
-    ax.set_ylabel("Detections")
-    ax.set_title("Confidence distribution")
-    fig.tight_layout()
+    with plt.style.context("dark_background"):
+        fig, ax = plt.subplots(figsize=(5, 3))
+        ax.hist(confs, bins=50, color="steelblue", edgecolor="white", linewidth=0.5)
+        ax.axvline(threshold, color="crimson", linestyle="--", linewidth=1.5, label=f"Threshold {threshold:.2f}")
+        ax.legend(fontsize=8)
+        ax.set_xlabel("Confidence score")
+        ax.set_ylabel("Detections")
+        ax.set_title("Confidence distribution")
+        fig.tight_layout()
     return fig
 
 
 def _size_plot(sizes_px):
-    fig, ax = plt.subplots(figsize=(5, 3))
-    ax.hist(sizes_px, bins=50, color="darkorange", edgecolor="white", linewidth=0.5)
-    ax.set_xlabel("Box size (px)")
-    ax.set_ylabel("Detections")
-    ax.set_title("Box size distribution")
-    fig.tight_layout()
+    with plt.style.context("dark_background"):
+        fig, ax = plt.subplots(figsize=(5, 3))
+        ax.hist(sizes_px, bins=50, color="darkorange", edgecolor="white", linewidth=0.5)
+        ax.set_xlabel("Box size (px)")
+        ax.set_ylabel("Detections")
+        ax.set_title("Box size distribution")
+        fig.tight_layout()
     return fig
 
 
 def _mic_count_plot(mics, threshold):
-    counts = [sum(1 for d in m["dets"] if d["conf"] >= threshold) for m in mics]
-    fig, ax = plt.subplots(figsize=(9, 3))
-    ax.bar(range(len(counts)), counts, color="mediumseagreen", width=1.0, linewidth=0)
-    ax.set_xlabel("Micrograph index")
-    ax.set_ylabel("Particles")
-    ax.set_title(f"Particles per micrograph  (threshold = {threshold:.2f})")
-    fig.tight_layout()
+    with plt.style.context("dark_background"):
+        counts = [sum(1 for d in m["dets"] if d["conf"] >= threshold) for m in mics]
+        fig, ax = plt.subplots(figsize=(9, 3))
+        ax.bar(range(len(counts)), counts, color="mediumseagreen", width=1.0, linewidth=0)
+        ax.set_xlabel("Micrograph index")
+        ax.set_ylabel("Particles")
+        ax.set_title(f"Particles per micrograph  (threshold = {threshold:.2f})")
+        fig.tight_layout()
     return fig
 
 
 def _bivariate_plot(confs, sizes):
-    fig, ax = plt.subplots(figsize=(5, 3))
-    h = ax.hist2d(confs, sizes, bins=50, cmap="viridis")
-    fig.colorbar(h[3], ax=ax, label="Detections")
-    ax.set_xlabel("Confidence score")
-    ax.set_ylabel("Box size (px)")
-    ax.set_title("Confidence vs box size")
-    fig.tight_layout()
+    with plt.style.context("dark_background"):
+        fig, ax = plt.subplots(figsize=(5, 3))
+        h = ax.hist2d(confs, sizes, bins=50, cmap="viridis")
+        fig.colorbar(h[3], ax=ax, label="Detections")
+        ax.set_xlabel("Confidence score")
+        ax.set_ylabel("Box size (px)")
+        ax.set_title("Confidence vs box size")
+        fig.tight_layout()
     return fig
 
 
@@ -389,13 +399,13 @@ def _find_labels_dirs(project_dir):
 
 def refresh_labels(project_dir):
     dirs = _find_labels_dirs(project_dir)
-    return gr.update(choices=dirs, value=dirs[0] if dirs else "")
+    return dirs[0] if dirs else ""
 
 
 def update_project_dir(project_dir):
     p = (project_dir or "").strip()
     if not p:
-        return ("", "", "", gr.update(choices=[], value=""), "", "")
+        return ("", "", "", "", "", "", jobs_markdown(""), jobs_dropdown_update(""), "")
     denoised = os.path.join(p, "denoised")
     dirs = _find_labels_dirs(p)
     labels_val = dirs[0] if dirs else os.path.join(p, "exp", "labels")
@@ -403,10 +413,28 @@ def update_project_dir(project_dir):
         p,                                          # d1_project
         denoised,                                   # d2_source
         p,                                          # d2_project
-        gr.update(choices=dirs, value=labels_val),  # d3_labels
+        labels_val,                                 # d3_labels
         denoised,                                   # d3_images
         os.path.join(p, "particles.star"),          # d3_output
+        jobs_markdown(p),
+        jobs_dropdown_update(p),
+        "",
     )
+
+
+def refresh_jobs(project_dir, job_key=None):
+    log = read_job_log(project_dir, job_key or "")
+    return jobs_markdown(project_dir), jobs_dropdown_update(project_dir), log
+
+
+def view_job_log(project_dir, job_key):
+    return read_job_log(project_dir, job_key or "")
+
+
+def cancel_selected_job(project_dir, job_key):
+    message = cancel_job(job_key or "", project_dir)
+    markdown, dropdown, log = refresh_jobs(project_dir, job_key)
+    return markdown, dropdown, log, message
 
 
 # ── Gradio UI ────────────────────────────────────────────────────────────────
@@ -422,11 +450,33 @@ def build_app():
             info="Set once — auto-fills project paths in all three stages below",
         )
 
+        with gr.Accordion("Running jobs", open=False):
+            jobs_markdown_out = gr.Markdown("Set a project directory to view jobs.")
+            job_select = gr.Dropdown(
+                label="Select job",
+                choices=[],
+                interactive=True,
+                info="Select a running job to view its log below",
+            )
+            job_log_view = gr.Textbox(
+                label="Job log",
+                lines=16,
+                max_lines=40,
+                interactive=False,
+            )
+            with gr.Row():
+                jobs_refresh_btn = gr.Button("Refresh", variant="secondary")
+                jobs_cancel_btn = gr.Button("Cancel selected", variant="stop")
+            jobs_cancel_status = gr.Markdown("")
+            jobs_timer = gr.Timer(5)
+
         with gr.Accordion("Execution settings (Local / Slurm)", open=False):
             gr.Markdown(
                 "Run stages on this machine (**Local**) or submit batch jobs (**Slurm**). "
-                "Leave Slurm fields blank to use cluster defaults. "
-                "Optional defaults file: set `PARTINET_SLURM_CONFIG` to a YAML path."
+                "Resource defaults update per stage when you switch tabs "
+                "(denoise/detect: 32 CPUs, 100G RAM; detect adds 4 GPUs; star: 16 CPUs, 64G RAM). "
+                "Leave fields blank to use those defaults. "
+                "Optional cluster-wide overrides: set `PARTINET_SLURM_CONFIG` to a YAML path."
             )
             exec_mode = gr.Radio(["Local", "Slurm"], value="Local", label="Execution mode")
             with gr.Row():
@@ -434,9 +484,9 @@ def build_app():
                 slurm_account = gr.Textbox(label="Account", placeholder="")
                 slurm_time = gr.Textbox(label="Time limit", placeholder="HH:MM:SS")
             with gr.Row():
-                slurm_cpus = gr.Textbox(label="CPUs per task", placeholder="")
-                slurm_gpus = gr.Textbox(label="GPUs (gres count)", placeholder="")
-                slurm_mem = gr.Textbox(label="Memory", placeholder="")
+                slurm_cpus = gr.Textbox(label="CPUs per task", value="32", placeholder="32")
+                slurm_gpus = gr.Textbox(label="GPUs (gres count)", value="", placeholder="")
+                slurm_mem = gr.Textbox(label="Memory", value="100G", placeholder="100G")
             slurm_extra = gr.Textbox(
                 label="Extra #SBATCH lines",
                 placeholder="#SBATCH --constraint=...",
@@ -461,7 +511,7 @@ def build_app():
         with gr.Tabs():
 
             # ── 1. Denoise ───────────────────────────────────────────────────
-            with gr.Tab("1 · Denoise"):
+            with gr.Tab("1 · Denoise") as tab_denoise:
                 gr.Markdown(
                     "Improve signal-to-noise in raw micrographs using a Wiener filter. "
                     "Output images are saved to `project/denoised/`."
@@ -500,14 +550,14 @@ def build_app():
                     max_lines=30,
                     interactive=False,
                 )
-                d1_btn.click(
+                d1_evt = d1_btn.click(
                     run_denoise,
                     inputs=[d1_source, d1_project, d1_fmt, d1_workers] + slurm_inputs,
                     outputs=d1_log,
                 )
 
             # ── 2. Detect ────────────────────────────────────────────────────
-            with gr.Tab("2 · Detect"):
+            with gr.Tab("2 · Detect") as tab_detect:
                 gr.Markdown(
                     "Locate particles in denoised micrographs using the DynamicDet model. "
                     "Results are saved to `project/exp/`."
@@ -569,7 +619,7 @@ def build_app():
                     max_lines=30,
                     interactive=False,
                 )
-                d2_btn.click(
+                d2_evt = d2_btn.click(
                     run_detect,
                     inputs=[
                         d2_weight, d2_source, d2_project, d2_conf, d2_iou, d2_device, d2_imgsize, d2_dy,
@@ -578,7 +628,7 @@ def build_app():
                 )
 
             # ── 3. Star File ─────────────────────────────────────────────────
-            with gr.Tab("3 · Star File"):
+            with gr.Tab("3 · Star File") as tab_star:
                 gr.Markdown(
                     "Load detections from a Detect run, explore statistics, set a confidence "
                     "threshold interactively, then generate a STAR file for **CryoSPARC** or **RELION**."
@@ -666,7 +716,7 @@ def build_app():
                     inputs=[d3_state, d3_mic_select, d3_thresh],
                     outputs=[d3_preview, d3_mic_stats],
                 )
-                d3_star_btn.click(
+                d3_evt = d3_star_btn.click(
                     run_star,
                     inputs=[
                         d3_labels, d3_images, d3_output, d3_thresh, d3_relion, d3_relion_dir, d3_mrc_prefix,
@@ -674,16 +724,56 @@ def build_app():
                     outputs=d3_log,
                 )
 
+        jobs_outputs = [jobs_markdown_out, job_select, job_log_view]
+        jobs_refresh_btn.click(refresh_jobs, inputs=[gr_project, job_select], outputs=jobs_outputs)
+        jobs_timer.tick(refresh_jobs, inputs=[gr_project, job_select], outputs=jobs_outputs)
+        job_select.change(view_job_log, inputs=[gr_project, job_select], outputs=job_log_view)
+        jobs_cancel_btn.click(
+            cancel_selected_job,
+            inputs=[gr_project, job_select],
+            outputs=[jobs_markdown_out, job_select, job_log_view, jobs_cancel_status],
+            cancels=[d1_evt, d2_evt, d3_evt],
+        )
+
         gr_project.change(
             update_project_dir,
             inputs=[gr_project],
-            outputs=[d1_project, d2_source, d2_project, d3_labels, d3_images, d3_output],
+            outputs=[
+                d1_project, d2_source, d2_project, d3_labels, d3_images, d3_output,
+                jobs_markdown_out, job_select, job_log_view,
+            ],
         )
+
+        slurm_resource_outputs = [slurm_cpus, slurm_gpus, slurm_mem]
+        tab_denoise.select(lambda: slurm_field_defaults("denoise"), outputs=slurm_resource_outputs)
+        tab_detect.select(lambda: slurm_field_defaults("detect"), outputs=slurm_resource_outputs)
+        tab_star.select(lambda: slurm_field_defaults("star"), outputs=slurm_resource_outputs)
 
     return app
 
 
-def launch_gui(host="0.0.0.0", port=None, share=False):
+def launch_gui(host="127.0.0.1", port=None, share=False):
+    import click
+
     app = build_app()
     app.queue()
-    app.launch(server_name=host, server_port=port, share=share, theme=_THEME, ssr_mode=False)
+    browse_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    if port is not None:
+        click.echo(f"PartiNet GUI — open http://{browse_host}:{port} on this machine.")
+        click.echo("Over SSH, forward the port from your laptop, then browse to localhost:")
+        click.echo(f"  ssh -L {port}:127.0.0.1:{port} user@login-node")
+        click.echo(f"  http://localhost:{port}")
+    else:
+        click.echo(f"PartiNet GUI — open http://{browse_host}:<port> on this machine.")
+        click.echo(
+            "Over SSH, forward the port Gradio prints below, then open http://localhost:<port> "
+            "in your local browser."
+        )
+    app.launch(
+        server_name=host,
+        server_port=port,
+        share=share,
+        theme=_THEME,
+        head=_DEFAULT_DARK_HEAD,
+        ssr_mode=False,
+    )
