@@ -53,6 +53,27 @@ The **Project directory** field at the top of the GUI is set once and auto-fills
 
 Individual fields remain editable if you need to override a path for a specific stage.
 
+Optional environment variables at launch:
+
+- `PARTINET_PROJECT` — pre-fill the project directory
+- `PARTINET_WEIGHTS` — pre-fill the Detect weights path
+- `PARTINET_SLURM_CONFIG` — path to a user-owned YAML file with default Slurm settings
+
+## Execution modes (Local / Slurm)
+
+Open **Execution settings** to choose how each stage runs:
+
+| Mode | Description |
+|------|-------------|
+| **Local** | Run `partinet` as a subprocess on the machine hosting the GUI |
+| **Slurm** | Write a batch script under `<project>/.partinet_jobs/` and submit with `sbatch` |
+
+All Slurm fields (partition, account, time, CPUs, GPUs, memory) are optional — leave them blank to use your cluster defaults. Use **Job setup script** for site-specific setup (`module load`, `conda activate`, container `apptainer exec`, etc.) without hardcoding paths in the PartiNet source.
+
+Logs stream in the browser from `{project}/partinet_denoise.log`, `partinet_detect.log`, or `partinet_star.log`. Slurm job IDs are shown when a batch job is submitted.
+
+On HPC, run the GUI on a login or visualization node (with SSH port forwarding) and submit Denoise, Detect, and Star File jobs to compute nodes via Slurm.
+
 ## Stage 1 · Denoise
 
 Applies the PartiNet Wiener filter denoiser to raw micrographs and saves cleaned images to `project/denoised/`.
@@ -122,8 +143,8 @@ Click **Generate STAR File** to write a CryoSPARC-compatible `.star` file. The c
 | Audience | Beginners, interactive exploration | Experienced users, scripting, HPC |
 | Log output | Streamed live in the browser | Terminal / log file |
 | Threshold tuning | Interactive slider with live preview | Set once at run time |
-| Automation | Not suitable | Fully scriptable |
-| Container support | Local installation only | Apptainer / Docker |
+| Automation | Slurm submission from GUI | Fully scriptable |
+| HPC | Login-node GUI + Slurm batch jobs | Apptainer / Docker / modules |
 
 For large-scale or automated processing, the CLI remains the recommended approach.
 
