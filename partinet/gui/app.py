@@ -1,15 +1,12 @@
 import os
-import queue
-import logging
-import threading
-import traceback
-import argparse
-import time
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import gradio as gr
+
+from partinet.gui.job_runner import JobSpec, SlurmOptions, stream_job
+from partinet.process_utils.image_io import is_micrograph_file, micrograph_dimensions, load_micrograph_for_detect
 
 # ── Branding ──────────────────────────────────────────────────────────────────
 
@@ -43,201 +40,149 @@ _HEADER_HTML = """
 """
 
 
-# ── Log capture ──────────────────────────────────────────────────────────────
-
-class _QueueHandler(logging.Handler):
-    def __init__(self, q):
-        super().__init__()
-        self.q = q
-
-    def emit(self, record):
-        self.q.put(self.format(record) + "\n")
+def _env_default(name: str) -> str:
+    return os.environ.get(name, "").strip()
 
 
-def _stream_stage(fn, args, loggers):
-    """Run fn(*args) in a daemon thread; yield accumulated log text for Gradio streaming."""
-    fmt = logging.Formatter("%(asctime)s - %(message)s")
-    log_q = queue.Queue()
-    handler = _QueueHandler(log_q)
-    handler.setFormatter(fmt)
+def _slurm_from_ui(mode, partition, account, time_limit, cpus, gpus, mem, extra, preamble, partinet_cmd):
+    return SlurmOptions(
+        partition=(partition or "").strip(),
+        account=(account or "").strip(),
+        time_limit=(time_limit or "").strip(),
+        cpus=str(cpus).strip() if cpus not in (None, "") else "",
+        gpus=str(gpus).strip() if gpus not in (None, "") else "",
+        mem=(mem or "").strip(),
+        extra_sbatch=(extra or "").strip(),
+        preamble=(preamble or "").strip(),
+        partinet_cmd=(partinet_cmd or "partinet").strip() or "partinet",
+    ), _normalize_mode(mode)
 
-    for name in loggers:
-        lg = logging.getLogger(name)
-        lg.addHandler(handler)
-        if lg.level == logging.NOTSET or lg.level > logging.INFO:
-            lg.setLevel(logging.INFO)
 
-    result = {"done": False, "error": None}
+def _normalize_mode(mode: str) -> str:
+    m = (mode or "Local").strip().lower()
+    return "slurm" if m == "slurm" else "local"
 
-    def _target():
-        try:
-            fn(*args)
-        except Exception:
-            result["error"] = traceback.format_exc()
-        finally:
-            result["done"] = True
 
-    threading.Thread(target=_target, daemon=True).start()
+def _project_log(project: str, name: str) -> str:
+    return os.path.join(project.strip(), name)
 
-    output = ""
-    while not result["done"]:
-        time.sleep(1.0)
-        while not log_q.empty():
-            output += log_q.get_nowait()
-        yield output
 
-    # drain any messages that arrived after the thread set done=True
-    while not log_q.empty():
-        output += log_q.get_nowait()
-
-    for name in loggers:
-        logging.getLogger(name).removeHandler(handler)
-
-    if result["error"]:
-        output += f"\n--- FAILED ---\n{result['error']}"
-    else:
-        output += "\n--- Complete ---"
-
-    yield output
+def _run_job(spec: JobSpec):
+    yield from stream_job(spec)
 
 
 # ── Stage runners ────────────────────────────────────────────────────────────
 
-def run_denoise(source, project, img_format, num_workers):
-    if not source.strip():
+def run_denoise(source, project, img_format, num_workers, mode, partition, account, time_limit, cpus, gpus, mem, extra, preamble, partinet_cmd):
+    source, project = source.strip(), project.strip()
+    if not source:
         yield "ERROR: Raw micrographs directory is required."
         return
-    if not project.strip():
+    if not project:
         yield "ERROR: Project directory is required."
         return
 
-    ncpu = int(num_workers) if num_workers else None
-    os.makedirs(project.strip(), exist_ok=True)
-    log_path = os.path.join(project.strip(), "partinet_denoise.log")
+    os.makedirs(project, exist_ok=True)
+    cmd = ["partinet", "denoise", "--source", source, "--project", project, "--img_format", img_format]
+    if num_workers not in (None, ""):
+        cmd.extend(["--num_workers", str(int(num_workers))])
 
-    import partinet.process_utils.pooled_denoise_proc as _m
-
-    result = {"done": False, "error": None}
-
-    def _target():
-        try:
-            _m.main(source.strip(), project.strip(), ncpu, img_format)
-        except Exception:
-            result["error"] = traceback.format_exc()
-        finally:
-            result["done"] = True
-
-    threading.Thread(target=_target, daemon=True).start()
-
-    # Tail the log file — child processes write to it via inherited file descriptors,
-    # so this is more reliable than a QueueHandler across process boundaries.
-    output = ""
-    log_file = None
-    while not result["done"]:
-        time.sleep(1.0)
-        if log_file is None and os.path.exists(log_path):
-            log_file = open(log_path, "r")
-        if log_file is not None:
-            output += log_file.read()
-        yield output
-
-    # Final read after the thread finishes
-    if log_file is None and os.path.exists(log_path):
-        log_file = open(log_path, "r")
-    if log_file is not None:
-        output += log_file.read()
-        log_file.close()
-
-    if result["error"]:
-        output += f"\n--- FAILED ---\n{result['error']}"
-    else:
-        output += "\n--- Complete ---"
-
-    yield output
+    slurm, job_mode = _slurm_from_ui(mode, partition, account, time_limit, cpus, gpus, mem, extra, preamble, partinet_cmd)
+    spec = JobSpec(
+        stage="denoise",
+        command=cmd,
+        project_dir=project,
+        log_path=_project_log(project, "partinet_denoise.log"),
+        mode=job_mode,
+        slurm=slurm,
+    )
+    yield from _run_job(spec)
 
 
-def run_detect(weight, source, project, conf_thres, iou_thres, device, img_size, dy_thres):
-    if not weight.strip():
+def run_detect(weight, source, project, conf_thres, iou_thres, device, img_size, dy_thres, mode, partition, account, time_limit, cpus, gpus, mem, extra, preamble, partinet_cmd):
+    weight, source, project = weight.strip(), source.strip(), project.strip()
+    if not weight:
         yield "ERROR: Model weights path is required."
         return
-    if not source.strip():
+    if not source:
         yield "ERROR: Source images directory is required."
         return
-    if not project.strip():
+    if not project:
         yield "ERROR: Project directory is required."
         return
 
-    opt = argparse.Namespace(
-        backbone_detector="yolov7-w6",
-        weight=weight.strip(),
-        source=source.strip(),
-        num_classes=1,
-        img_size=int(img_size),
-        conf_thres=conf_thres,
-        iou_thres=iou_thres,
-        device=device.strip(),
-        view_img=False,
-        save_txt=True,
-        save_conf=True,
-        nosave=False,
-        classes=None,
-        agnostic_nms=False,
-        augment=False,
-        project=project.strip(),
-        name="exp",
-        exist_ok=True,
-        dy_thres=dy_thres,
+    cmd = [
+        "partinet", "detect",
+        "--weight", weight,
+        "--source", source,
+        "--project", project,
+        "--conf-thres", str(conf_thres),
+        "--iou-thres", str(iou_thres),
+        "--img-size", str(int(img_size)),
+        "--dy-thres", str(dy_thres),
+        "--exist-ok",
+    ]
+    if device.strip():
+        cmd.extend(["--device", device.strip()])
+
+    slurm, job_mode = _slurm_from_ui(mode, partition, account, time_limit, cpus, gpus, mem, extra, preamble, partinet_cmd)
+    spec = JobSpec(
+        stage="detect",
+        command=cmd,
+        project_dir=project,
+        log_path=_project_log(project, "partinet_detect.log"),
+        mode=job_mode,
+        slurm=slurm,
     )
-
-    import partinet.DynamicDet.detect as _m
-
-    # Remove stale FileHandlers left by previous detect() calls
-    detect_logger = logging.getLogger("partinet_detect")
-    for h in detect_logger.handlers[:]:
-        if isinstance(h, logging.FileHandler):
-            detect_logger.removeHandler(h)
-            h.close()
-
-    yield from _stream_stage(
-        _m.detect,
-        (opt,),
-        loggers=["partinet_detect"],
-    )
+    yield from _run_job(spec)
 
 
-def run_star(labels, images, output, conf, relion, relion_project_dir, mrc_prefix):
+def run_star(labels, images, output, conf, relion, relion_project_dir, mrc_prefix, mode, partition, account, time_limit, cpus, gpus, mem, extra, preamble, partinet_cmd):
+    labels, images, output = labels.strip(), images.strip(), output.strip()
     relion_project_dir = (relion_project_dir or "").strip()
     mrc_prefix = (mrc_prefix or "").strip()
 
-    if not labels.strip():
+    if not labels:
         yield "ERROR: Labels directory is required."
         return
-    if not images.strip():
+    if not images:
         yield "ERROR: Images directory is required."
         return
-    if not output.strip():
+    if not output:
         yield "ERROR: Output STAR file path is required."
         return
     if relion and not relion_project_dir:
         yield "ERROR: RELION project directory is required when RELION output is enabled."
         return
 
-    import partinet.process_utils.star_file as _m
-    yield from _stream_stage(
-        _m.main,
-        (
-            labels.strip(), images.strip(), output.strip(), conf,
-            relion,
-            relion_project_dir or None,
-            mrc_prefix,
-        ),
-        loggers=["partinet.process_utils.star_file"],
+    project = os.path.dirname(os.path.abspath(output))
+    cmd = [
+        "partinet", "star",
+        "--labels", labels,
+        "--images", images,
+        "--output", output,
+        "--conf", str(conf),
+    ]
+    if relion:
+        cmd.extend(["--relion", "--relion-project-dir", relion_project_dir])
+        if mrc_prefix:
+            cmd.extend(["--mrc-prefix", mrc_prefix])
+
+    slurm, job_mode = _slurm_from_ui(mode, partition, account, time_limit, cpus, gpus, mem, extra, preamble, partinet_cmd)
+    spec = JobSpec(
+        stage="star",
+        command=cmd,
+        project_dir=project,
+        log_path=_project_log(project, "partinet_star.log"),
+        mode=job_mode,
+        slurm=slurm,
     )
+    yield from _run_job(spec)
 
 
 # ── Star File analysis ───────────────────────────────────────────────────────
 
-_IMG_EXTS = (".png", ".jpg", ".jpeg", ".tif", ".tiff")
+_IMG_EXTS = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".mrc")
 
 
 def _parse_label_file(path):
@@ -255,11 +200,9 @@ def _parse_label_file(path):
 
 
 def _img_size(path):
-    from PIL import Image as _PIL
     try:
-        with _PIL.open(path) as img:
-            return img.size  # (w, h)
-    except Exception:
+        return micrograph_dimensions(path)
+    except (ValueError, OSError):
         return 4096, 4096
 
 
@@ -373,7 +316,12 @@ def _retained_text(confs, threshold):
 
 def _draw_detections(mic, threshold, max_px=1000):
     from PIL import Image as _PIL, ImageDraw
-    img = _PIL.open(mic["img"]).convert("RGB")
+    import cv2
+    if mic["img"].lower().endswith(".mrc"):
+        bgr = load_micrograph_for_detect(mic["img"])
+        img = _PIL.fromarray(cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB))
+    else:
+        img = _PIL.open(mic["img"]).convert("RGB")
     w, h = img.size
     scale = min(1.0, max_px / max(w, h))
     dw, dh = int(w * scale), int(h * scale)
@@ -467,13 +415,48 @@ def build_app():
     with gr.Blocks(title="PartiNet") as app:
         gr.HTML(_HEADER_HTML)
 
-        _testing_project = "/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/gui_testing"
         gr_project = gr.Textbox(
             label="Project directory",
-            value=_testing_project,
+            value=_env_default("PARTINET_PROJECT"),
             placeholder="/path/to/my_project",
             info="Set once — auto-fills project paths in all three stages below",
         )
+
+        with gr.Accordion("Execution settings (Local / Slurm)", open=False):
+            gr.Markdown(
+                "Run stages on this machine (**Local**) or submit batch jobs (**Slurm**). "
+                "Leave Slurm fields blank to use cluster defaults. "
+                "Optional defaults file: set `PARTINET_SLURM_CONFIG` to a YAML path."
+            )
+            exec_mode = gr.Radio(["Local", "Slurm"], value="Local", label="Execution mode")
+            with gr.Row():
+                slurm_partition = gr.Textbox(label="Partition", placeholder="")
+                slurm_account = gr.Textbox(label="Account", placeholder="")
+                slurm_time = gr.Textbox(label="Time limit", placeholder="HH:MM:SS")
+            with gr.Row():
+                slurm_cpus = gr.Textbox(label="CPUs per task", placeholder="")
+                slurm_gpus = gr.Textbox(label="GPUs (gres count)", placeholder="")
+                slurm_mem = gr.Textbox(label="Memory", placeholder="")
+            slurm_extra = gr.Textbox(
+                label="Extra #SBATCH lines",
+                placeholder="#SBATCH --constraint=...",
+                lines=2,
+            )
+            slurm_preamble = gr.Textbox(
+                label="Job setup script",
+                placeholder="# module load ...\\n# source activate ...",
+                lines=3,
+            )
+            slurm_partinet_cmd = gr.Textbox(
+                label="PartiNet executable",
+                value="partinet",
+                placeholder="partinet",
+            )
+
+        slurm_inputs = [
+            exec_mode, slurm_partition, slurm_account, slurm_time,
+            slurm_cpus, slurm_gpus, slurm_mem, slurm_extra, slurm_preamble, slurm_partinet_cmd,
+        ]
 
         with gr.Tabs():
 
@@ -487,13 +470,13 @@ def build_app():
                     d1_source = gr.Textbox(
                         label="Raw micrographs directory",
                         placeholder="/path/to/motion_corrected",
-                        value="/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/motioncorrected",
+                        value="",
                         info="Folder of .mrc files from RELION or CryoSPARC motion correction",
                     )
                     d1_project = gr.Textbox(
                         label="Project directory",
                         placeholder="/path/to/my_project",
-                        value="/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/gui_testing",
+                        value=_env_default("PARTINET_PROJECT"),
                         info="All PartiNet outputs for this dataset will be written here",
                     )
                 with gr.Row():
@@ -505,7 +488,7 @@ def build_app():
                     )
                     d1_workers = gr.Number(
                         label="CPU workers (blank = auto)",
-                        value=8,
+                        value=None,
                         precision=0,
                         minimum=1,
                         info="Parallel workers for denoising; auto uses half the available CPUs",
@@ -519,7 +502,7 @@ def build_app():
                 )
                 d1_btn.click(
                     run_denoise,
-                    inputs=[d1_source, d1_project, d1_fmt, d1_workers],
+                    inputs=[d1_source, d1_project, d1_fmt, d1_workers] + slurm_inputs,
                     outputs=d1_log,
                 )
 
@@ -533,20 +516,20 @@ def build_app():
                     d2_weight = gr.Textbox(
                         label="Model weights (.pt)",
                         placeholder="/path/to/model.pt",
-                        value="/stornext/System/data/software/rhel/9/base/structbio/PartiNet/weights/denoised_micrographs_v2.pt",
+                        value=_env_default("PARTINET_WEIGHTS"),
                         info="Pre-trained weights — download from HuggingFace or use your own trained model",
                     )
                     d2_source = gr.Textbox(
                         label="Denoised images directory",
                         placeholder="/path/to/my_project/denoised",
-                        value="/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/gui_testing/denoised",
+                        value="",
                         info="Output of the Denoise step (project/denoised/)",
                     )
                 with gr.Row():
                     d2_project = gr.Textbox(
                         label="Project directory",
                         placeholder="/path/to/my_project",
-                        value="/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/gui_testing",
+                        value=_env_default("PARTINET_PROJECT"),
                         info="Same project directory used in Denoise",
                     )
                     d2_device = gr.Textbox(
@@ -588,7 +571,9 @@ def build_app():
                 )
                 d2_btn.click(
                     run_detect,
-                    inputs=[d2_weight, d2_source, d2_project, d2_conf, d2_iou, d2_device, d2_imgsize, d2_dy],
+                    inputs=[
+                        d2_weight, d2_source, d2_project, d2_conf, d2_iou, d2_device, d2_imgsize, d2_dy,
+                    ] + slurm_inputs,
                     outputs=d2_log,
                 )
 
@@ -604,13 +589,13 @@ def build_app():
                     d3_labels = gr.Textbox(
                         label="Labels directory",
                         placeholder="/path/to/project/exp/labels",
-                        value="/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/gui_testing/exp/labels",
+                        value="",
                         info="Folder of .txt detection files from the Detect step",
                     )
                     d3_images = gr.Textbox(
                         label="Denoised images directory",
                         placeholder="/path/to/project/denoised",
-                        value="/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/gui_testing/denoised",
+                        value="",
                         info="Used to resolve image dimensions for coordinate conversion",
                     )
                 d3_state = gr.State(None)
@@ -641,7 +626,7 @@ def build_app():
                 d3_output = gr.Textbox(
                     label="Output STAR file",
                     placeholder="/path/to/project/particles.star",
-                    value="/vast/cryoem/cryoem_scratch/lab_shakeel/perera.m/EMPIAR_10089/gui_testing/particles.star",
+                    value="",
                     info="CryoSPARC-compatible STAR file will be written here",
                 )
                 with gr.Accordion("RELION output (optional)", open=False):
@@ -683,7 +668,9 @@ def build_app():
                 )
                 d3_star_btn.click(
                     run_star,
-                    inputs=[d3_labels, d3_images, d3_output, d3_thresh, d3_relion, d3_relion_dir, d3_mrc_prefix],
+                    inputs=[
+                        d3_labels, d3_images, d3_output, d3_thresh, d3_relion, d3_relion_dir, d3_mrc_prefix,
+                    ] + slurm_inputs,
                     outputs=d3_log,
                 )
 
