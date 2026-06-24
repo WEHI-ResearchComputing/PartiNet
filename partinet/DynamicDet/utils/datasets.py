@@ -30,6 +30,7 @@ from torchvision.ops import roi_pool, roi_align, ps_roi_pool, ps_roi_align
 from partinet.DynamicDet.utils.general import check_requirements, xyxy2xywh, xywh2xyxy, xywhn2xyxy, xyn2xy, segment2box, segments2boxes, \
     resample_segments, clean_str
 from partinet.DynamicDet.utils.torch_utils import torch_distributed_zero_first
+from partinet.process_utils.image_io import load_micrograph_for_detect
 from partinet.process_utils.guided_denoiser import transform
 
 # Parameters
@@ -191,11 +192,7 @@ class LoadImages:  # for inference
             self.count += 1
             # support cryo-EM micrographs saved as MRC
             if path.lower().endswith('.mrc'):
-                img_mrc = mrcfile.read(path)
-                img0 = transform(img_mrc).astype(np.uint8)
-                # `transform` returns a single-channel image; networks expect BGR
-                if img0.ndim == 2:
-                    img0 = cv2.cvtColor(img0, cv2.COLOR_GRAY2BGR)
+                img0 = load_micrograph_for_detect(path)
             else:
                 img0 = cv2.imread(path)  # BGR
             assert img0 is not None, 'Image Not Found ' + path
@@ -684,10 +681,7 @@ def load_image(self, index):
         path = self.img_files[index]
         # support uncompressed mrc micrographs
         if path.lower().endswith('.mrc'):
-            img_mrc = mrcfile.read(path)
-            img = transform(img_mrc).astype(np.uint8)
-            if img.ndim == 2:
-                img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+            img = load_micrograph_for_detect(path)
         else:
             img = cv2.imread(path)  # BGR
         assert img is not None, 'Image Not Found ' + path
