@@ -40,8 +40,12 @@ dependencies = [
   "tensorboard",
   "scikit-learn",
   "mrcfile",
-  "pytest",
   "gradio",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
 ]
 
 [project.scripts]
