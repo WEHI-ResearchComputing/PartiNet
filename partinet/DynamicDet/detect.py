@@ -65,7 +65,12 @@ def detect(opt, save_img=False):
     save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)
 
-    fh = logging.FileHandler(Path(opt.project) / 'partinet_detect.log')
+    log_path = Path(opt.project) / 'partinet_detect.log'
+    for h in logger.handlers[:]:
+        if isinstance(h, logging.FileHandler):
+            logger.removeHandler(h)
+            h.close()
+    fh = logging.FileHandler(log_path)
     fh.setFormatter(formatter)
     fh.setLevel(logging.INFO)
     logger.addHandler(fh)

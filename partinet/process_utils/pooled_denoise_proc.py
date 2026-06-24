@@ -7,8 +7,28 @@ import multiprocessing
 import argparse
 import gc
 from concurrent.futures import ProcessPoolExecutor
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import mrcfile
+import sys
+
+logger = logging.getLogger("partinet_denoise")
+
+
+def _configure_denoise_logging(log_path: str) -> None:
+    """Attach file and stream handlers once per run; remove stale handlers first."""
+    fmt = logging.Formatter("%(asctime)s - %(message)s")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    for h in logger.handlers[:]:
+        logger.removeHandler(h)
+        h.close()
+    fh = logging.FileHandler(log_path)
+    fh.setFormatter(fmt)
+    logger.addHandler(fh)
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setFormatter(fmt)
+    logger.addHandler(sh)
+
 
 # Function to perform CLAHE-based denoising
 
@@ -33,15 +53,21 @@ def clahe_denoise(args: Tuple[str, str, str]) -> None:
             mrcfile.write(dest_path,data=denoised)
         else:
             cv2.imwrite(dest_path, denoised)
-        logging.info(f"Processed image {src_path} to dest. {dest_path}")
+        logger.info(f"Processed image {src_path} to dest. {dest_path}")
         del denoised
         gc.collect()
     except Exception as e:
-        logging.error(f"Failed to process {src_path}: {str(e)}")
+        logger.error(f"Failed to process {src_path}: {str(e)}")
 
 # Function to process all files in a directory
 
-def process_directory(micrographs_dir: str, clahe_denoised_dir: str, max_workers: int, img_format: str) -> None:
+def process_directory(
+    micrographs_dir: str,
+    clahe_denoised_dir: str,
+    max_workers: int,
+    img_format: str,
+    log_path: Optional[str] = None,
+) -> None:
     """
     Processes all `.mrc` files in the given directory using parallel workers for denoising.
 
@@ -56,7 +82,7 @@ def process_directory(micrographs_dir: str, clahe_denoised_dir: str, max_workers
         - Existing denoised images are skipped.
     """
     os.makedirs(clahe_denoised_dir, exist_ok=True)
-    logging.info(f"Directory ready: {clahe_denoised_dir}")
+    logger.info(f"Directory ready: {clahe_denoised_dir}")
 
     tasks: List[Tuple[str, str, str]] = []
     # Iterate through files in the directory
@@ -65,15 +91,21 @@ def process_directory(micrographs_dir: str, clahe_denoised_dir: str, max_workers
             src_path = os.path.join(micrographs_dir, file_name)
             dest_path = os.path.join(clahe_denoised_dir, file_name.replace(".mrc", "."+img_format))
             if os.path.exists(dest_path):
-                logging.info(f"{dest_path} already exists!")
+                logger.info(f"{dest_path} already exists!")
             else:
                 tasks.append((src_path, dest_path, img_format))
 
-    # Parallel processing of tasks
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+    if not tasks:
+        logger.info("No new micrographs to denoise.")
+        return
+
+    pool_kwargs = {}
+    if log_path:
+        pool_kwargs = {"initializer": _configure_denoise_logging, "initargs": (log_path,)}
+    with ProcessPoolExecutor(max_workers=max_workers, **pool_kwargs) as executor:
         futures = [executor.submit(clahe_denoise, task) for task in tasks]
-    for future in futures:
-        future.result()
+        for future in futures:
+            future.result()
     gc.collect()
 
 # Main function
@@ -95,13 +127,7 @@ def main(source_dir: str, project_dir: str, ncpu: int, img_format: str) -> None:
     # Prepare output directory and log file
     denoise_dir = os.path.join(project_dir, "denoised")
     log_path = os.path.join(project_dir, "partinet_denoise.log")
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    fmt = logging.Formatter('%(asctime)s - %(message)s')
-    fh = logging.FileHandler(log_path)
-    fh.setFormatter(fmt)
-    root_logger.addHandler(fh)
-    root_logger.addHandler(logging.StreamHandler())
+    _configure_denoise_logging(log_path)
 
     # Determine number of available CPUs
     max_available_cpus = multiprocessing.cpu_count()
@@ -113,12 +139,11 @@ def main(source_dir: str, project_dir: str, ncpu: int, img_format: str) -> None:
     else:
         ncpu = max_workers
 
-    logging.info(f"Using {ncpu} workers out of {max_available_cpus} available CPUs.")
-    logging.info(f"Processing raw micrographs in {source_dir}")
-    logging.info(f"Saving denoised micrographs in {denoise_dir}")
+    logger.info(f"Using {ncpu} workers out of {max_available_cpus} available CPUs.")
+    logger.info(f"Processing raw micrographs in {source_dir}")
+    logger.info(f"Saving denoised micrographs in {denoise_dir}")
 
-    # Process the directory
-    process_directory(source_dir, denoise_dir, ncpu, img_format)
+    process_directory(source_dir, denoise_dir, ncpu, img_format, log_path=log_path)
 
 # Command-line argument parsing
 
