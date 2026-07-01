@@ -15,7 +15,7 @@ const config: Config = {
   },
 
   url: 'https://wehi-researchcomputing.github.io',
-  baseUrl: '/',
+  baseUrl: '/PartiNet/',
   organizationName: 'WEHI-ResearchComputing',
   projectName: 'PartiNet',
   deploymentBranch: 'gh-pages',

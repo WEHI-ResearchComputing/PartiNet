@@ -40,11 +40,13 @@ docker run --gpus all -v /data:/data \
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `--labels` | Path | Yes | Directory containing the particle coordinate files (`.txt` format) from the detection stage |
-| `--images` | Path | Yes | Directory containing the denoised micrographs corresponding to the labels |
+| `--images` | Path | Yes | Directory containing micrographs used during Detect — usually `<project>/denoised/`; if you skipped denoise, use the same folder as detect `--source` |
 | `--output` | Path | Yes | Output path for the generated STAR file |
 | `--conf` | Float | Yes | Confidence threshold for filtering particle coordinates (0.0-1.0) |
 
 ## Input Requirements
+
+**Important:** `--images` must match the folder passed to `partinet detect --source`. After the standard pipeline that is `<project>/denoised/`; after skip-denoise on raw MRC it is `<project>/motion_corrected/` (or wherever your `.mrc` files live).
 
 At this stage of the pipeline, your directory structure should look like:
 ```

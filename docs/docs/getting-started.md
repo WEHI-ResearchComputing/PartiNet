@@ -6,6 +6,14 @@ sidebar_position: 3
 
 This guide walks you through your first PartiNet analysis using the three-stage pipeline. We'll process cryo-EM micrographs from start to finish.
 
+:::tip New to PartiNet?
+The **[GUI](gui.md)** is the easiest way to get started — no command-line experience needed. Launch it with `partinet gui` and run all three stages from your browser.
+
+![PartiNet GUI overview](/img/gui_overview.png)
+
+The CLI walkthrough below is for users who prefer scripting, are working in containers, or need to run PartiNet on an HPC cluster.
+:::
+
 ## Prerequisites
 
 Before starting, ensure you have:
@@ -24,26 +32,28 @@ project_directory/
 │   ├── micrograph1.mrc
 │   ├── micrograph2.mrc
 │   └── ...
-├── denoised/                  # Created by denoise stage
-│   ├── micrograph1.mrc
-│   ├── micrograph2.mrc
+├── denoised/                  # Created by denoise stage (default: .png)
+│   ├── micrograph1.png
+│   ├── micrograph2.png
 │   └── ...
 ├── exp/                       # Created by detect stage
 │   ├── labels/               # Detection coordinates (YOLO format)
 │   │   ├── micrograph1.txt
 │   │   ├── micrograph2.txt
 │   │   └── ...
-│   ├── micrograph1.png    # Micrographs with detections drawn
-│   ├── micrograph2.
+│   ├── micrograph1.png       # Micrographs with detections drawn
+│   ├── micrograph2.png
 │   └── ...
 └── partinet_particles.star   # CryoSPARC-style STAR file (created by star stage)
 ```
 
 **Pipeline Flow:**
 1. **Input** → `motion_corrected/` (your micrographs)
-2. **Stage 1** → `denoised/` (cleaned micrographs)
+2. **Stage 1** → `denoised/` (cleaned micrographs, PNG by default)
 3. **Stage 2** → `exp*/` (detections + visualizations)
 4. **Stage 3** → `*.star` (final particle coordinates)
+
+See [Detect — skip denoise](stages/detect.md#skip-denoise-raw-mrc) if picking directly on raw MRC without denoising.
 
 ## Stage 1: Denoise
 
@@ -53,8 +63,8 @@ The first stage removes noise from your micrographs and improves signal-to-noise
 
 ```shell title="Local Installation"
 partinet denoise \
-    --source /data/my_project/motion_corrected \
-    --project /data/my_project
+    --source /data/partinet_picking/motion_corrected \
+    --project /data/partinet_picking
 ```
 
 </div>
@@ -100,9 +110,9 @@ The final stage converts detections to STAR format and applies confidence filter
 
 ```shell title="Local Installation"
 partinet star \
-    --labels /data/my_project/exp/labels \
-    --images /data/my_project/denoised \
-    --output /data/my_project/partinet_particles.star \
+    --labels /data/partinet_picking/exp/labels \
+    --images /data/partinet_picking/denoised \
+    --output /data/partinet_picking/partinet_particles.star \
     --conf 0.1
 ```
 
@@ -118,7 +128,7 @@ partinet star \
 After running all three stages, you'll have:
 
 1. **Denoised micrographs** (`denoised/`) - Cleaned input for particle detection
-2. **Detection visualizations** (`exp/*.mrc`) - Micrographs with particle boxes drawn
+2. **Detection visualizations** (`exp/*.png`) - Micrographs with particle boxes drawn
 3. **Detection coordinates** (`exp/labels/*.txt`) - Raw detection data
 4. **STAR file** (`*.star`) - Final particle coordinates ready for downstream processing
 

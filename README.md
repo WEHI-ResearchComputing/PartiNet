@@ -17,6 +17,7 @@ Use our pretrained model at [Model Weights](https://huggingface.co/MihinP/PartiN
 - Seamless integration with cryoSPARC and RELION workflows
 - Confidence-based particle filtering
 - Visual detection validation
+- Browser GUI (`partinet gui`) with optional Slurm job submission
 
 ## Prerequisites
 
@@ -112,6 +113,7 @@ Available commands:
 - `denoise`: Clean input micrographs
 - `detect`: Identify particles
 - `star`: Generate STAR files
+- `gui`: Launch the Gradio GUI (local or Slurm execution)
 - `train`: Train custom models
 
 

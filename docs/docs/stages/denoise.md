@@ -12,10 +12,12 @@ Denoising can vastly improve particle picking by helping to increase signal to n
 
 ### Required Parameters
 
-| Parameter | Description | Example |
-|-----------|-------------|---------|
-| `--source` | Directory containing motion-corrected micrographs in MRC format | `/data/partinet_picking/motion_corrected` |
-| `--project` | Parent project directory where all outputs will be saved | `/data/partinet_picking` |
+| Parameter | Role | Example |
+|-----------|------|---------|
+| `--source` | Input folder for this stage (motion-corrected `.mrc` files) | `/data/partinet_picking/motion_corrected` |
+| `--project` | Dataset root where outputs and logs are written | `/data/partinet_picking` |
+
+Denoised micrographs are always written to `<project>/denoised/`. The `--source` directory is never modified.
 
 ### Optional Parameters
 
@@ -166,7 +168,7 @@ partinet denoise \
 
 
 ### Different Output Formats
-By default PartiNet outputs denoised images in `png` format. This is necessary for compatibility with the detection architecture. `png` is a lossless compression, however micrographs are normalised from 32 bit depth `mrc` files to 8 bit `png`. `jpg` is also available (as a legacy format) but is not recommended for use due to lossy compression.
+By default PartiNet outputs denoised images in `png` format. This is the recommended format for the Detect stage. `png` is lossless; micrographs are normalised from 32-bit MRC to 8-bit PNG. `jpg` is available but not recommended due to lossy compression.
 
 ```shell
 # JPEG format (smaller file size, lossy compression)

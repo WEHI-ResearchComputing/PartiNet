@@ -1,7 +1,7 @@
 import click
-import sys, os
+import sys
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 DYNAMICDET_AVAILABLE_MODELS = ["yolov7", "yolov7x", "yolov7-w6", "yolov7-e6", "yolov7-d6", "yolov7-e6e"]
 
@@ -104,6 +104,15 @@ def denoise(source, project, num_workers,img_format):
     click.echo("Denoising micrographs...")
     import partinet.process_utils.pooled_denoise_proc
     partinet.process_utils.pooled_denoise_proc.main(source,project,num_workers,img_format)
+
+@main.command()
+@click.option('--host', default='127.0.0.1', show_default=True, help='Host to bind the GUI server to')
+@click.option('--port', default=None, type=int, help='Port to run the GUI on (default: auto-select)')
+@click.option('--share', is_flag=True, help='Create a public Gradio share link')
+def gui(host, port, share):
+    """Launch the PartiNet Gradio GUI."""
+    from partinet.gui import launch_gui
+    launch_gui(host=host, port=port, share=share)
 
 
 @main.group()

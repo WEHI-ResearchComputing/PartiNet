@@ -1,11 +1,34 @@
+import logging
 import math
 import os
+import sys
 import pandas as pd
 import csv
-import cv2
 import argparse
 from typing import List, Dict, Tuple, Optional
 from multiprocessing import Pool, cpu_count
+
+from partinet.process_utils.image_io import micrograph_dimensions
+
+logger = logging.getLogger("partinet.process_utils.star_file")
+
+
+def _configure_star_logging(star_out_path: str) -> str:
+    project_dir = os.path.dirname(os.path.abspath(star_out_path)) or "."
+    log_path = os.path.join(project_dir, "partinet_star.log")
+    fmt = logging.Formatter("%(asctime)s - %(message)s")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    for h in logger.handlers[:]:
+        logger.removeHandler(h)
+        h.close()
+    fh = logging.FileHandler(log_path)
+    fh.setFormatter(fmt)
+    logger.addHandler(fh)
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setFormatter(fmt)
+    logger.addHandler(sh)
+    return log_path
 
 def yolo_to_starfile(yolo_coords: Dict[str, float], image_width: int, image_height: int, diameters: List[int]) -> Tuple[int, int, int]:
     x_center = math.ceil(yolo_coords["x_centre"] * image_width)
@@ -34,10 +57,10 @@ def process_image(args_tuple) -> List[Tuple[str, int, int, int]]:
         # skip missing labels
         return []
 
-    image = cv2.imread(os.path.join(images_path, image_file))
-    if image is None:
+    try:
+        img_width, img_height = micrograph_dimensions(os.path.join(images_path, image_file))
+    except (ValueError, OSError):
         return []
-    img_width, img_height = image.shape[1], image.shape[0]
 
     custom_headers = ["class", "x_centre", "y_centre", "width", "height", "conf"]
     labels = pd.read_csv(label_file_path, header=None, names=custom_headers, sep=r"\s+")
@@ -99,6 +122,8 @@ def relion_write(all_rows: List[Tuple[str, int, int, int]], pick_out: str, coord
     write_relion_pick_star(mapping, pick_out)
 
 def main(labels_path: str, images_path: str, star_out_path: str, conf_thresh: float, relion: bool = False, relion_project_dir: Optional[str] = None, relion_pick: Optional[str] = None, relion_coord_dir: Optional[str] = None, mrc_prefix: str = "") -> None:
+    _configure_star_logging(star_out_path)
+    logger.info(f"Generating STAR file from labels in {labels_path}")
     image_files = [f for f in os.listdir(images_path) if os.path.splitext(f)[1].lower() in [".mrc", ".tif", ".tiff", ".png", ".jpg", ".jpeg"]]
     args_list = [(img_file, labels_path, images_path, conf_thresh) for img_file in image_files]
 
@@ -107,11 +132,11 @@ def main(labels_path: str, images_path: str, star_out_path: str, conf_thresh: fl
 
     all_rows = [row for result in results for row in result]
     if not all_rows:
-        print("No particle rows produced.")
+        logger.info("No particle rows produced.")
         return
 
     write_cryosparc_star(all_rows, star_out_path)
-    print(f"Wrote cryosparc-compatible star to: {star_out_path}")
+    logger.info(f"Wrote CryoSPARC-compatible STAR file to: {star_out_path}")
 
     if relion:
         if relion_project_dir is None:
@@ -121,8 +146,8 @@ def main(labels_path: str, images_path: str, star_out_path: str, conf_thresh: fl
         relion_coorddir = os.path.join(relion_partinet, "movies")
         os.makedirs(relion_coorddir, exist_ok=True)
         relion_write(all_rows, relion_pickstar, relion_coorddir, mrc_prefix)
-        print(f"Wrote relion pick.star: {relion_pickstar}")
-        print(f"Wrote relion per-micrograph stars under: {relion_coorddir}")
+        logger.info(f"Wrote RELION pick.star: {relion_pickstar}")
+        logger.info(f"Wrote RELION per-micrograph stars under: {relion_coorddir}")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate STAR files from YOLO labels (CryoSPARC and optional RELION)")
