@@ -8,36 +8,35 @@ jobs:
   build-test-containers:
     runs-on: ubuntu-latest
     strategy:
-      # Keep going on other deployments if anything bloops
       fail-fast: false
       matrix:
+        # Must match an existing tag on quay.io/singularity/singularity (full semver, e.g. 4.1.0 not 4.0).
         singularity_version:
-          - '4.0'
+          - '4.1.0'
 
     container:
       image: quay.io/singularity/singularity:v${{ matrix.singularity_version }}
       options: --privileged
 
     steps:
-
       - name: Check out code for the container builds
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Build Container
+      - name: Verify Singularity definition exists
         run: |
-         if [ -f Singularity ]; then
-            sudo -E singularity build container.sif Singularity
-         else
-           echo "Singularity is not found."
-           echo "Present working directory: $PWD"
-           ls
-         fi
-      
+          if [ ! -f Singularity ]; then
+            echo "Singularity definition file not found in $(pwd)"
+            ls -la
+            exit 1
+          fi
+
+      - name: Build Container
+        run: sudo -E singularity build container.sif Singularity
+
       - name: Set Tag Based on Branch Name
         run: |
-          # Get the branch name and set it as the tag
           tag=${GITHUB_REF##*/}-singularity
           echo "Tag is $tag."
           echo "tag=$tag" >> $GITHUB_ENV
@@ -45,6 +44,6 @@ jobs:
       - name: Login and Deploy Container
         if: (github.event_name != 'pull_request')
         run: |
-            echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
-            container_name=$(echo ${GITHUB_REPOSITORY} | tr '[:upper:]' '[:lower:]')
-            singularity push container.sif oras://ghcr.io/${container_name}:${tag}
+          echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ secrets.GHCR_USERNAME }} --password-stdin oras://ghcr.io
+          container_name=$(echo ${GITHUB_REPOSITORY} | tr '[:upper:]' '[:lower:]')
+          singularity push container.sif oras://ghcr.io/${container_name}:${tag}
